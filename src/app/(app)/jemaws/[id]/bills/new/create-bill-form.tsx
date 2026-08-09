@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createBill } from "@/actions/bills";
 import { uploadReceipt } from "@/lib/cloudinary";
+import { splitMoneyEqually } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,10 +52,19 @@ export function CreateBillForm({
   const [isPending, startTransition] = useTransition();
 
   const splitUserIds = members.map((m) => m.userId);
-  const perPerson =
-    amount && !isNaN(parseFloat(amount)) && splitUserIds.length > 0
-      ? (parseFloat(amount) / splitUserIds.length).toFixed(2)
-      : null;
+  let splitPreview = new Map<string, string>();
+  if (amount && splitUserIds.length > 0) {
+    try {
+      splitPreview = new Map(
+        splitMoneyEqually(amount, splitUserIds, currency).map((split) => [
+          split.userId,
+          split.amount,
+        ])
+      );
+    } catch {
+      splitPreview = new Map();
+    }
+  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -164,7 +174,9 @@ export function CreateBillForm({
                 {m.userId === currentUserId && <span className="ml-1 text-xs">(you)</span>}
               </span>
               <span className="font-medium tabular-nums">
-                {perPerson ? `${currency} ${perPerson}` : "—"}
+                {splitPreview.has(m.userId)
+                  ? `${currency} ${splitPreview.get(m.userId)}`
+                  : "—"}
               </span>
             </div>
           ))}

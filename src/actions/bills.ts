@@ -11,6 +11,11 @@ import {
 import { requireAuth } from "@/lib/session";
 import { notifyUsersForBillApproval } from "@/lib/email";
 import { formatCurrency } from "@/lib/utils";
+import {
+  normalizeMoney,
+  splitMoneyEqually,
+  subtractMoney,
+} from "@/lib/money";
 import { logActivity } from "@/actions/activity";
 import { createNotification } from "@/actions/notifications";
 import { eq, and, sql, ne, inArray } from "drizzle-orm";
@@ -65,6 +70,7 @@ export async function createBill(input: CreateBillInput) {
       eq(jemawMembers.jemawId, jemawId),
       eq(jemawMembers.userId, userId)
     ),
+    with: { jemaw: true },
   });
 
   if (!membership) {
@@ -83,10 +89,12 @@ export async function createBill(input: CreateBillInput) {
     throw new Error("All users in the split must be members of this group");
   }
 
-  // Calculate split amounts (equal split)
-  const totalAmount = parseFloat(amount);
-  const splitCount = splitUserIds.length;
-  const splitAmount = (totalAmount / splitCount).toFixed(2);
+  const normalizedAmount = normalizeMoney(amount, membership.jemaw.currency);
+  const splitAmounts = splitMoneyEqually(
+    normalizedAmount,
+    splitUserIds,
+    membership.jemaw.currency
+  );
 
   // Create bill and splits in a transaction
   const result = await db.transaction(async (tx) => {
@@ -96,7 +104,7 @@ export async function createBill(input: CreateBillInput) {
       .values({
         jemawId,
         description,
-        amount,
+        amount: normalizedAmount,
         category,
         paidById: userId,
         status: "pending",
@@ -105,10 +113,10 @@ export async function createBill(input: CreateBillInput) {
       .returning();
 
     // Create bill splits
-    const splitValues = splitUserIds.map((splitUserId) => ({
+    const splitValues = splitAmounts.map((split) => ({
       billId: newBill.id,
-      userId: splitUserId,
-      amount: splitAmount,
+      userId: split.userId,
+      amount: split.amount,
     }));
 
     await tx.insert(billSplits).values(splitValues);
@@ -139,7 +147,7 @@ export async function createBill(input: CreateBillInput) {
       jemawId,
       jemawName: jemaw?.name || "Unknown Group",
       description,
-      amount: formatCurrency(amount, jemaw?.currency || "USD"),
+      amount: formatCurrency(normalizedAmount, jemaw?.currency || "USD"),
       paidByName: payer?.name || "Someone",
       eligibleApprovers: approvers.map((a) => ({
         email: a.email,
@@ -152,7 +160,7 @@ export async function createBill(input: CreateBillInput) {
       eligibleApproverIds.map((approverId) =>
         createNotification({
           userId: approverId,
-          message: `${payer?.name ?? "Someone"} added a bill "${description}" (${formatCurrency(amount, jemaw?.currency || "USD")}) — your approval needed`,
+          message: `${payer?.name ?? "Someone"} added a bill "${description}" (${formatCurrency(normalizedAmount, jemaw?.currency || "USD")}) — your approval needed`,
           link: `/pending`,
         })
       )
@@ -168,7 +176,7 @@ export async function createBill(input: CreateBillInput) {
     action: "bill.created",
     targetType: "bill",
     targetId: result.id,
-    metadata: { description, amount },
+    metadata: { description, amount: normalizedAmount },
   }).catch(console.error);
 
   return {
@@ -248,13 +256,13 @@ export async function approveBill(input: z.infer<typeof approveBillSchema>) {
     // Calculate total owed to payer (exclude their own portion if they're in the split)
     const payerSplit = bill.splits.find((s) => s.userId === bill.paidById);
     const payerOwedAmount = payerSplit
-      ? parseFloat(bill.amount) - parseFloat(payerSplit.amount)
-      : parseFloat(bill.amount);
+      ? subtractMoney(bill.amount, payerSplit.amount, bill.jemaw.currency)
+      : bill.amount;
 
     await tx
       .update(jemawMembers)
       .set({
-        balance: sql`${jemawMembers.balance} + ${payerOwedAmount.toFixed(2)}`,
+        balance: sql`${jemawMembers.balance} + ${payerOwedAmount}`,
       })
       .where(
         and(
