@@ -12,7 +12,7 @@ import {
 } from "@/db/schema";
 import { requireAuth } from "@/lib/session";
 import { sendJemawInvitationEmail } from "@/lib/email";
-import { eq, and, inArray, isNull, or } from "drizzle-orm";
+import { eq, and, inArray, isNull, or, gt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
@@ -91,11 +91,15 @@ const updateJemawSchema = z.object({
 
 const inviteMemberSchema = z.object({
   jemawId: z.string().uuid(),
-  email: z.string().email("Invalid email address"),
+  email: z
+    .string()
+    .trim()
+    .email("Invalid email address")
+    .transform((email) => email.toLowerCase()),
 });
 
 const acceptInvitationSchema = z.object({
-  token: z.string().min(1),
+  token: z.string().trim().min(1),
 });
 
 export type CreateJemawInput = z.infer<typeof createJemawSchema>;
@@ -252,7 +256,7 @@ export async function inviteMember(input: InviteMemberInput) {
   if (membership.jemaw.archivedAt) throw new Error("This group is archived");
 
   const existingUser = await db.query.users.findFirst({
-    where: eq(users.email, email),
+    where: sql`lower(${users.email}) = ${email}`,
   });
 
   if (existingUser) {
@@ -265,8 +269,8 @@ export async function inviteMember(input: InviteMemberInput) {
   const existingInvitation = await db.query.jemawInvitations.findFirst({
     where: and(
       eq(jemawInvitations.jemawId, jemawId),
-      eq(jemawInvitations.email, email),
-      eq(jemawInvitations.acceptedAt, null as unknown as Date)
+      sql`lower(${jemawInvitations.email}) = ${email}`,
+      isNull(jemawInvitations.acceptedAt)
     ),
   });
 
@@ -314,6 +318,12 @@ export async function acceptInvitation(input: { token: string }) {
   if (!invitation) throw new Error("Invalid invitation");
   if (invitation.acceptedAt) throw new Error("This invitation has already been used");
   if (invitation.expiresAt < new Date()) throw new Error("This invitation has expired");
+  if (invitation.jemaw.archivedAt) throw new Error("This group is archived");
+
+  const signedInEmail = session.user.email.trim().toLowerCase();
+  if (signedInEmail !== invitation.email.trim().toLowerCase()) {
+    throw new Error("Sign in with the email address that received this invitation");
+  }
 
   const existingMembership = await db.query.jemawMembers.findFirst({
     where: and(eq(jemawMembers.jemawId, invitation.jemawId), eq(jemawMembers.userId, userId)),
@@ -322,10 +332,21 @@ export async function acceptInvitation(input: { token: string }) {
   if (existingMembership) throw new Error("You are already a member of this group");
 
   await db.transaction(async (tx) => {
-    await tx
+    const [claimedInvitation] = await tx
       .update(jemawInvitations)
       .set({ acceptedAt: new Date() })
-      .where(eq(jemawInvitations.id, invitation.id));
+      .where(
+        and(
+          eq(jemawInvitations.id, invitation.id),
+          isNull(jemawInvitations.acceptedAt),
+          gt(jemawInvitations.expiresAt, new Date())
+        )
+      )
+      .returning({ id: jemawInvitations.id });
+
+    if (!claimedInvitation) {
+      throw new Error("This invitation has already been used or has expired");
+    }
 
     await tx.insert(jemawMembers).values({
       jemawId: invitation.jemawId,
@@ -516,12 +537,15 @@ export async function getJemawStats(jemawId: string) {
 }
 
 export async function getInvitationByToken(token: string) {
+  const parsedToken = acceptInvitationSchema.safeParse({ token });
+  if (!parsedToken.success) return null;
+
   const invitation = await db.query.jemawInvitations.findFirst({
-    where: eq(jemawInvitations.token, token),
+    where: eq(jemawInvitations.token, parsedToken.data.token),
     with: { jemaw: true },
   });
 
-  if (!invitation) return null;
+  if (!invitation || invitation.jemaw.archivedAt) return null;
 
   return {
     jemawName: invitation.jemaw.name,
