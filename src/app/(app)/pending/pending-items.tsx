@@ -134,11 +134,11 @@ export function PendingItems({
 
   return (
     <>
-      <div className="flex items-start gap-8">
+      <div className="flex flex-col items-start gap-6 md:flex-row md:gap-8">
         {/* Left sticky sidebar */}
-        <div className="w-52 shrink-0 sticky top-24">
+        <div className="w-full shrink-0 md:sticky md:top-24 md:w-52">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Approvals</p>
-          <div className="space-y-0.5">
+          <div className="grid grid-cols-3 gap-1 md:block md:space-y-0.5">
             {filters.map(({ key, label, icon, count }) => (
               <button
                 key={key}

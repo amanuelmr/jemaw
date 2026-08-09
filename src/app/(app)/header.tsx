@@ -110,7 +110,7 @@ export function Header({ user }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 h-14 bg-white/95 backdrop-blur-sm border-b border-slate-200">
-      <div className="max-w-6xl mx-auto h-full px-6 flex items-center gap-6">
+      <div className="max-w-6xl mx-auto h-full px-4 sm:px-6 flex items-center gap-3 md:gap-6">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2 shrink-0 mr-2">
           <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center">
@@ -120,9 +120,11 @@ export function Header({ user }: HeaderProps) {
         </Link>
 
         {/* Nav */}
-        <nav className="flex items-center gap-1">
+        <nav aria-label="Primary navigation" className="hidden md:flex items-center gap-1">
           {navLinks.map(({ href, label }) => {
-            const active = pathname.startsWith(href);
+            const active =
+              pathname.startsWith(href) ||
+              (href === "/dashboard" && pathname.startsWith("/jemaws"));
             return (
               <Link
                 key={href}

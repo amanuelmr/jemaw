@@ -92,9 +92,9 @@ export function ProfileForm({ user }: { user: User }) {
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="flex min-h-[480px]">
+      <div className="flex min-h-[480px] flex-col md:flex-row">
         {/* Left identity panel */}
-        <div className="w-64 shrink-0 border-r border-slate-200 px-8 py-8 flex flex-col">
+        <div className="w-full shrink-0 border-b border-slate-200 px-5 py-6 flex flex-col sm:px-8 md:w-64 md:border-b-0 md:border-r md:py-8">
           <div className="relative self-start">
             <Avatar className="w-20 h-20">
               {avatarPreview && <AvatarImage src={avatarPreview} alt={user.name} />}
@@ -123,10 +123,10 @@ export function ProfileForm({ user }: { user: User }) {
         {/* Right settings panel */}
         <div className="flex-1 min-w-0">
           {/* Section 1: Personal information */}
-          <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100">
+          <div className="flex items-center justify-between px-5 sm:px-8 py-4 border-b border-slate-100">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Personal information</span>
           </div>
-          <form onSubmit={handleProfileSave} className="px-8 py-6 space-y-5 border-b border-slate-100">
+          <form onSubmit={handleProfileSave} className="px-5 sm:px-8 py-6 space-y-5 border-b border-slate-100">
             <div className="space-y-1.5">
               <Label htmlFor="name" className="text-xs font-medium text-slate-700">Display name</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required className="h-9" />
@@ -147,7 +147,7 @@ export function ProfileForm({ user }: { user: User }) {
           <button
             type="button"
             onClick={() => setPasswordOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-8 py-4 border-b border-slate-100 hover:bg-slate-50/60 transition-colors text-left"
+            className="w-full flex items-center justify-between px-5 sm:px-8 py-4 border-b border-slate-100 hover:bg-slate-50/60 transition-colors text-left"
           >
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Security</span>
             <span className="text-xs text-indigo-600 flex items-center gap-1">
@@ -156,7 +156,7 @@ export function ProfileForm({ user }: { user: User }) {
             </span>
           </button>
           {passwordOpen && (
-            <form onSubmit={handlePasswordChange} className="px-8 py-6 space-y-5">
+            <form onSubmit={handlePasswordChange} className="px-5 sm:px-8 py-6 space-y-5">
               <div className="space-y-1.5">
                 <Label htmlFor="current-pw" className="text-xs font-medium text-slate-700">Current password</Label>
                 <Input id="current-pw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required className="h-9" />

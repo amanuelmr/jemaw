@@ -35,7 +35,7 @@ export function JemawCard({ jemaw }: { jemaw: JemawWithBalance }) {
 
   return (
     <Link href={`/jemaws/${jemaw.id}`}>
-      <div className="flex items-center px-6 py-4 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0 cursor-pointer">
+      <div className="flex items-center px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0 cursor-pointer">
         {/* Group avatar */}
         <div className={`w-10 h-10 rounded-xl ${colorClass} flex items-center justify-center font-bold text-sm mr-4 shrink-0 select-none`}>
           {initial}

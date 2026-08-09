@@ -41,7 +41,7 @@ export default async function JemawPage({
 
       {/* Group header */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-xl font-bold text-slate-900 truncate">{jemaw.name}</h1>
@@ -63,7 +63,7 @@ export default async function JemawPage({
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap justify-end shrink-0">
+          <div className="flex w-full items-center gap-2 flex-wrap sm:w-auto sm:justify-end sm:shrink-0">
             {jemaw.isAdmin && (
               <EditJemawDialog
                 jemawId={id}

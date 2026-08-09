@@ -43,7 +43,7 @@ export default async function DashboardPage() {
 
         {isSingleCurrency ? (
           <div className="flex items-baseline gap-3 mb-4">
-            <p className={`text-5xl font-bold tracking-tight ${netBalance >= 0 ? "text-slate-900" : "text-rose-600"}`}>
+            <p className={`text-4xl sm:text-5xl font-bold tracking-tight ${netBalance >= 0 ? "text-slate-900" : "text-rose-600"}`}>
               {netBalance >= 0
                 ? netBalance === 0 ? formatCurrency(0, primaryCurrency) : `+${formatCurrency(netBalance, primaryCurrency)}`
                 : `−${formatCurrency(Math.abs(netBalance), primaryCurrency)}`}
@@ -52,7 +52,7 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="flex items-baseline gap-3 mb-4">
-            <p className="text-5xl font-bold tracking-tight text-slate-900">{jemaws.length}</p>
+            <p className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900">{jemaws.length}</p>
             <p className="text-sm text-slate-400 pb-1">active groups · multiple currencies</p>
           </div>
         )}
