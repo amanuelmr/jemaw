@@ -112,6 +112,7 @@ export const jemaws = pgTable("jemaws", {
     .references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  archivedAt: timestamp("archived_at"),
 });
 
 // Jemaw Members (Group membership)

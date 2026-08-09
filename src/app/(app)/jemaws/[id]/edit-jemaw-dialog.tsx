@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { updateJemaw, deleteJemaw } from "@/actions/jemaws";
+import { updateJemaw, archiveJemaw } from "@/actions/jemaws";
 import { SUPPORTED_CURRENCIES, CURRENCY_LABELS } from "@/lib/constants";
 import type { SupportedCurrency } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,7 @@ export function EditJemawDialog({
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription ?? "");
   const [currency, setCurrency] = useState(initialCurrency);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function handleUpdate(e: React.FormEvent) {
@@ -69,24 +69,24 @@ export function EditJemawDialog({
     });
   }
 
-  function handleDelete() {
-    if (!confirmDelete) {
-      setConfirmDelete(true);
+  function handleArchive() {
+    if (!confirmArchive) {
+      setConfirmArchive(true);
       return;
     }
     startTransition(async () => {
       try {
-        const result = await deleteJemaw({ jemawId });
+        const result = await archiveJemaw({ jemawId });
         toast.success(result.message);
         router.push("/dashboard");
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to delete group");
+        toast.error(err instanceof Error ? err.message : "Failed to archive group");
       }
     });
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setConfirmDelete(false); }}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setConfirmArchive(false); }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -141,23 +141,23 @@ export function EditJemawDialog({
         <div className="space-y-2">
           <p className="text-sm font-medium text-destructive">Danger zone</p>
           <p className="text-xs text-muted-foreground">
-            Deleting this group will permanently remove all bills, settlements, and members.
+            Archiving hides this group while preserving its bills, settlements, and audit history.
           </p>
           <Button
             type="button"
             variant="destructive"
             size="sm"
             disabled={isPending}
-            onClick={handleDelete}
+            onClick={handleArchive}
           >
-            {confirmDelete ? "Click again to confirm deletion" : "Delete group"}
+            {confirmArchive ? "Click again to confirm archive" : "Archive group"}
           </Button>
-          {confirmDelete && (
+          {confirmArchive && (
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setConfirmDelete(false)}
+              onClick={() => setConfirmArchive(false)}
             >
               Cancel
             </Button>

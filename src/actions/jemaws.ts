@@ -8,14 +8,72 @@ import {
   users,
   bills,
   billSplits,
+  settlements,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/session";
 import { sendJemawInvitationEmail } from "@/lib/email";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
 import { SUPPORTED_CURRENCIES } from "@/lib/constants";
+import { parseMinorUnits } from "@/lib/money";
+
+async function assertMemberCanExit(jemawId: string, targetUserId: string) {
+  const targetMembership = await db.query.jemawMembers.findFirst({
+    where: and(
+      eq(jemawMembers.jemawId, jemawId),
+      eq(jemawMembers.userId, targetUserId)
+    ),
+    with: { jemaw: true },
+  });
+
+  if (!targetMembership) {
+    throw new Error("This user is not a member of the group");
+  }
+
+  if (
+    parseMinorUnits(
+      targetMembership.balance,
+      targetMembership.jemaw.currency
+    ) !== 0n
+  ) {
+    throw new Error("Settle this member's balance before they leave the group");
+  }
+
+  const [pendingBill] = await db
+    .select({ id: bills.id })
+    .from(bills)
+    .leftJoin(billSplits, eq(billSplits.billId, bills.id))
+    .where(
+      and(
+        eq(bills.jemawId, jemawId),
+        eq(bills.status, "pending"),
+        or(
+          eq(bills.paidById, targetUserId),
+          eq(billSplits.userId, targetUserId)
+        )
+      )
+    )
+    .limit(1);
+
+  const pendingSettlement = await db.query.settlements.findFirst({
+    where: and(
+      eq(settlements.jemawId, jemawId),
+      eq(settlements.status, "pending"),
+      or(
+        eq(settlements.payerId, targetUserId),
+        eq(settlements.receiverId, targetUserId)
+      )
+    ),
+  });
+
+  if (pendingBill || pendingSettlement) {
+    throw new Error("Resolve this member's pending items before they leave");
+  }
+
+  return targetMembership;
+}
 
 const createJemawSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -87,6 +145,24 @@ export async function updateJemaw(input: z.infer<typeof updateJemawSchema>) {
 
   if (!membership?.isAdmin) throw new Error("Only admins can edit this group");
 
+  const currentJemaw = await db.query.jemaws.findFirst({
+    where: and(eq(jemaws.id, jemawId), isNull(jemaws.archivedAt)),
+  });
+  if (!currentJemaw) throw new Error("Group not found");
+
+  if (currency !== currentJemaw.currency) {
+    const [existingBill, existingSettlement] = await Promise.all([
+      db.query.bills.findFirst({ where: eq(bills.jemawId, jemawId) }),
+      db.query.settlements.findFirst({
+        where: eq(settlements.jemawId, jemawId),
+      }),
+    ]);
+
+    if (existingBill || existingSettlement) {
+      throw new Error("Currency cannot change after financial activity begins");
+    }
+  }
+
   await db
     .update(jemaws)
     .set({ name, description: description || null, currency, updatedAt: new Date() })
@@ -98,7 +174,7 @@ export async function updateJemaw(input: z.infer<typeof updateJemawSchema>) {
   return { success: true, message: "Group updated successfully" };
 }
 
-export async function deleteJemaw({ jemawId }: { jemawId: string }) {
+export async function archiveJemaw({ jemawId }: { jemawId: string }) {
   const session = await requireAuth();
   const userId = session.user.id;
 
@@ -106,13 +182,16 @@ export async function deleteJemaw({ jemawId }: { jemawId: string }) {
     where: and(eq(jemawMembers.jemawId, jemawId), eq(jemawMembers.userId, userId)),
   });
 
-  if (!membership?.isAdmin) throw new Error("Only admins can delete this group");
+  if (!membership?.isAdmin) throw new Error("Only admins can archive this group");
 
-  await db.delete(jemaws).where(eq(jemaws.id, jemawId));
+  await db
+    .update(jemaws)
+    .set({ archivedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(jemaws.id, jemawId), isNull(jemaws.archivedAt)));
 
   revalidatePath("/dashboard");
 
-  return { success: true, message: "Group deleted successfully" };
+  return { success: true, message: "Group archived. Its financial history was preserved." };
 }
 
 export async function removeMember({ jemawId, userId: targetUserId }: { jemawId: string; userId: string }) {
@@ -125,6 +204,8 @@ export async function removeMember({ jemawId, userId: targetUserId }: { jemawId:
 
   if (!adminMembership?.isAdmin) throw new Error("Only admins can remove members");
   if (adminId === targetUserId) throw new Error("Admins cannot remove themselves. Transfer admin rights first.");
+
+  await assertMemberCanExit(jemawId, targetUserId);
 
   await db
     .delete(jemawMembers)
@@ -139,18 +220,10 @@ export async function leaveJemaw({ jemawId }: { jemawId: string }) {
   const session = await requireAuth();
   const userId = session.user.id;
 
-  const membership = await db.query.jemawMembers.findFirst({
-    where: and(eq(jemawMembers.jemawId, jemawId), eq(jemawMembers.userId, userId)),
-  });
+  const membership = await assertMemberCanExit(jemawId, userId);
 
-  if (!membership) throw new Error("You are not a member of this group");
   if (membership.isAdmin) {
-    const allMembers = await db.query.jemawMembers.findMany({
-      where: eq(jemawMembers.jemawId, jemawId),
-    });
-    if (allMembers.length > 1) {
-      throw new Error("Transfer admin rights to another member before leaving");
-    }
+    throw new Error("Admins must transfer ownership or archive the group before leaving");
   }
 
   await db
@@ -285,11 +358,13 @@ export async function getMyJemaws() {
     },
   });
 
-  return memberships.map((m) => ({
-    ...m.jemaw,
-    myBalance: m.balance,
-    isAdmin: m.isAdmin,
-  }));
+  return memberships
+    .filter((membership) => !membership.jemaw.archivedAt)
+    .map((m) => ({
+      ...m.jemaw,
+      myBalance: m.balance,
+      isAdmin: m.isAdmin,
+    }));
 }
 
 export async function getJemawById(jemawId: string) {
@@ -303,7 +378,7 @@ export async function getJemawById(jemawId: string) {
   if (!membership) throw new Error("You are not a member of this group");
 
   const jemaw = await db.query.jemaws.findFirst({
-    where: eq(jemaws.id, jemawId),
+    where: and(eq(jemaws.id, jemawId), isNull(jemaws.archivedAt)),
     with: {
       createdBy: true,
       members: { with: { user: true } },
