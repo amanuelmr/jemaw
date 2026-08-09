@@ -7,6 +7,7 @@ import { approveBill, rejectBill } from "@/actions/bills";
 import { approveSettlement, rejectSettlement } from "@/actions/settlements";
 import { removeMember, leaveJemaw } from "@/actions/jemaws";
 import { getJemawActivity } from "@/actions/activity";
+import { getMyJemawLedger } from "@/actions/ledger";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { formatCurrency, cn } from "@/lib/utils";
-import { Check, X, ArrowRight, AlertCircle, Search, Clock, UserMinus, LogOut, Receipt, ArrowLeftRight } from "lucide-react";
+import { Check, X, ArrowRight, AlertCircle, Search, Clock, UserMinus, LogOut, Receipt, ArrowLeftRight, BookOpen, Info } from "lucide-react";
 
 type Member = {
   userId: string;
@@ -83,6 +84,23 @@ type ActivityLog = {
   metadata: string | null;
   createdAt: Date;
   user: { id: string; name: string };
+};
+
+type LedgerEntry = {
+  id: string;
+  amount: string;
+  sourceType: "bill" | "settlement" | "reversal" | "adjustment";
+  sourceId: string;
+  description: string | null;
+  balanceAfter: string;
+  createdAt: Date;
+};
+
+type LedgerData = {
+  currentBalance: string;
+  currency: string;
+  entries: LedgerEntry[];
+  hasOlderEntries: boolean;
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -567,6 +585,145 @@ function SettlementsTab({
   );
 }
 
+function ledgerEntryLabel(entry: LedgerEntry) {
+  const isPositive = !entry.amount.startsWith("-");
+  if (entry.sourceType === "bill") {
+    return isPositive ? "You paid for other members" : "Your share of a bill";
+  }
+  if (entry.sourceType === "settlement") {
+    return isPositive ? "A payment reduced what you owe" : "A payment reduced what you are owed";
+  }
+  if (entry.sourceType === "reversal") return "A previous entry was reversed";
+  return "Balance adjustment";
+}
+
+function BalanceTab({ jemawId }: { jemawId: string }) {
+  const [ledger, setLedger] = useState<LedgerData | null>(null);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    getMyJemawLedger(jemawId)
+      .then((data) => setLedger(data as LedgerData))
+      .catch(() => setLoadError(true));
+  }, [jemawId]);
+
+  if (loadError) {
+    return (
+      <div className="rounded-2xl border border-rose-100 bg-rose-50 py-12 text-center text-sm text-rose-600">
+        Balance details could not be loaded. Please refresh and try again.
+      </div>
+    );
+  }
+
+  if (!ledger) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-12 flex items-center justify-center gap-2 text-slate-400 text-sm">
+        <BookOpen className="w-4 h-4 animate-pulse" />
+        Explaining your balance…
+      </div>
+    );
+  }
+
+  const balance = parseFloat(ledger.currentBalance);
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          Your current balance
+        </p>
+        <p
+          className={cn(
+            "mt-1 text-2xl font-bold tabular-nums",
+            balance > 0
+              ? "text-emerald-600"
+              : balance < 0
+                ? "text-rose-600"
+                : "text-slate-500"
+          )}
+        >
+          {balance > 0 && "+"}
+          {formatCurrency(ledger.currentBalance, ledger.currency)}
+        </p>
+        <p className="mt-1 text-sm text-slate-500">
+          {balance > 0
+            ? "Group members owe you this amount."
+            : balance < 0
+              ? "You owe this amount across the group."
+              : "You are settled up with this group."}
+        </p>
+      </div>
+
+      <div className="flex gap-2 rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-700">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <p>
+          Only approved bills and confirmed payments affect this balance.
+          Pending or rejected items are excluded.
+        </p>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {ledger.entries.length === 0 ? (
+          <div className="py-14 text-center">
+            <BookOpen className="w-8 h-8 text-slate-200 mx-auto mb-3" />
+            <p className="text-sm text-slate-400">
+              No approved financial entries yet.
+            </p>
+          </div>
+        ) : (
+          ledger.entries.map((entry) => {
+            const isPositive = !entry.amount.startsWith("-");
+            return (
+              <div
+                key={entry.id}
+                className="flex items-start gap-3 border-b border-slate-100 px-5 py-4 last:border-0"
+              >
+                <div
+                  className={cn(
+                    "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+                    isPositive
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "bg-rose-50 text-rose-600"
+                  )}
+                >
+                  {isPositive ? "+" : "−"}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-slate-900">
+                    {ledgerEntryLabel(entry)}
+                  </p>
+                  <p className="truncate text-xs text-slate-500">
+                    {entry.description ||
+                      (entry.sourceType === "bill" ? "Approved bill" : "Confirmed payment")}
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    {new Date(entry.createdAt).toLocaleString()} · Balance after: {formatCurrency(entry.balanceAfter, ledger.currency)}
+                  </p>
+                </div>
+                <p
+                  className={cn(
+                    "shrink-0 text-sm font-semibold tabular-nums",
+                    isPositive ? "text-emerald-600" : "text-rose-600"
+                  )}
+                >
+                  {isPositive ? "+" : "−"}
+                  {formatCurrency(entry.amount.replace("-", ""), ledger.currency)}
+                </p>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {ledger.hasOlderEntries && (
+        <p className="text-center text-xs text-slate-400">
+          Showing the 200 most recent balance entries.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ActivityTab({ jemawId }: { jemawId: string }) {
   const [logs, setLogs] = useState<ActivityLog[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -627,26 +784,34 @@ export function JemawTabs({
 }) {
   return (
     <Tabs defaultValue="bills">
-      <TabsList className="mb-4 bg-slate-100 p-0.5 rounded-xl h-9">
-        <TabsTrigger value="bills" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-          Bills {jemaw.bills.length > 0 && <span className="ml-1 text-slate-400 font-normal">{jemaw.bills.length}</span>}
-        </TabsTrigger>
-        <TabsTrigger value="settlements" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-          Settlements {jemaw.settlements.length > 0 && <span className="ml-1 text-slate-400 font-normal">{jemaw.settlements.length}</span>}
-        </TabsTrigger>
-        <TabsTrigger value="members" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-          Members {jemaw.members.length > 0 && <span className="ml-1 text-slate-400 font-normal">{jemaw.members.length}</span>}
-        </TabsTrigger>
-        <TabsTrigger value="activity" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-          Activity
-        </TabsTrigger>
-      </TabsList>
+      <div className="mb-4 overflow-x-auto pb-1">
+        <TabsList className="bg-slate-100 p-0.5 rounded-xl h-9">
+          <TabsTrigger value="bills" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Bills {jemaw.bills.length > 0 && <span className="ml-1 text-slate-400 font-normal">{jemaw.bills.length}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="settlements" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Settlements {jemaw.settlements.length > 0 && <span className="ml-1 text-slate-400 font-normal">{jemaw.settlements.length}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="balance" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            My balance
+          </TabsTrigger>
+          <TabsTrigger value="members" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Members {jemaw.members.length > 0 && <span className="ml-1 text-slate-400 font-normal">{jemaw.members.length}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Activity
+          </TabsTrigger>
+        </TabsList>
+      </div>
 
       <TabsContent value="bills">
         <BillsTab bills={jemaw.bills} currentUserId={currentUserId} currency={jemaw.currency} />
       </TabsContent>
       <TabsContent value="settlements">
         <SettlementsTab settlements={jemaw.settlements} currentUserId={currentUserId} currency={jemaw.currency} />
+      </TabsContent>
+      <TabsContent value="balance">
+        <BalanceTab jemawId={jemaw.id} />
       </TabsContent>
       <TabsContent value="members">
         <MembersTab
