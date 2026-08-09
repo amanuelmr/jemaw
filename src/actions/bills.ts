@@ -18,7 +18,7 @@ import {
 } from "@/lib/money";
 import { logActivity } from "@/actions/activity";
 import { createNotification } from "@/actions/notifications";
-import { eq, and, sql, ne, inArray } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
@@ -242,7 +242,7 @@ export async function approveBill(input: z.infer<typeof approveBillSchema>) {
   // Approve the bill and update balances in a transaction
   await db.transaction(async (tx) => {
     // Update bill status to approved
-    await tx
+    const [approvedBill] = await tx
       .update(bills)
       .set({
         status: "approved",
@@ -250,7 +250,12 @@ export async function approveBill(input: z.infer<typeof approveBillSchema>) {
         approvedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(bills.id, billId));
+      .where(and(eq(bills.id, billId), eq(bills.status, "pending")))
+      .returning({ id: bills.id });
+
+    if (!approvedBill) {
+      throw new Error("This bill has already been processed");
+    }
 
     // Update balances for the payer (positive balance - they are owed money)
     // Calculate total owed to payer (exclude their own portion if they're in the split)
@@ -350,13 +355,18 @@ export async function rejectBill(input: z.infer<typeof approveBillSchema>) {
     throw new Error("Only users involved in this bill (excluding the payer) can reject it");
   }
 
-  await db
+  const [rejectedBill] = await db
     .update(bills)
     .set({
       status: "rejected",
       updatedAt: new Date(),
     })
-    .where(eq(bills.id, billId));
+    .where(and(eq(bills.id, billId), eq(bills.status, "pending")))
+    .returning({ id: bills.id });
+
+  if (!rejectedBill) {
+    throw new Error("This bill has already been processed");
+  }
 
   revalidatePath(`/jemaws/${bill.jemawId}`);
 

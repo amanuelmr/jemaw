@@ -5,6 +5,7 @@ import { settlements, jemawMembers, jemaws, users } from "@/db/schema";
 import { requireAuth } from "@/lib/session";
 import { notifyReceiverForSettlementApproval } from "@/lib/email";
 import { formatCurrency } from "@/lib/utils";
+import { normalizeMoney } from "@/lib/money";
 import { logActivity } from "@/actions/activity";
 import { createNotification } from "@/actions/notifications";
 import { eq, and, sql } from "drizzle-orm";
@@ -50,6 +51,7 @@ export async function createSettlement(input: CreateSettlementInput) {
       eq(jemawMembers.jemawId, jemawId),
       eq(jemawMembers.userId, userId)
     ),
+    with: { jemaw: true },
   });
 
   if (!payerMembership) {
@@ -68,6 +70,8 @@ export async function createSettlement(input: CreateSettlementInput) {
     throw new Error("The receiver is not a member of this group");
   }
 
+  const normalizedAmount = normalizeMoney(amount, payerMembership.jemaw.currency);
+
   // Create the settlement with pending status
   const [newSettlement] = await db
     .insert(settlements)
@@ -75,7 +79,7 @@ export async function createSettlement(input: CreateSettlementInput) {
       jemawId,
       payerId: userId,
       receiverId,
-      amount,
+      amount: normalizedAmount,
       description: description || null,
       paymentProofUrl,
       status: "pending",
@@ -102,7 +106,7 @@ export async function createSettlement(input: CreateSettlementInput) {
       jemawId,
       jemawName: jemaw?.name || "Unknown Group",
       description: description || `Payment from ${payer.name}`,
-      amount: formatCurrency(amount, jemaw?.currency || "USD"),
+      amount: formatCurrency(normalizedAmount, jemaw?.currency || "USD"),
       payerName: payer.name,
       receiver: {
         email: receiver.email,
@@ -121,12 +125,12 @@ export async function createSettlement(input: CreateSettlementInput) {
       action: "settlement.created",
       targetType: "settlement",
       targetId: newSettlement.id,
-      metadata: { amount, receiverName: receiver.name },
+      metadata: { amount: normalizedAmount, receiverName: receiver.name },
     }).catch(console.error);
 
     createNotification({
       userId: receiverId,
-      message: `${payer.name} recorded a payment of ${formatCurrency(amount, jemaw?.currency || "USD")} for you`,
+      message: `${payer.name} recorded a payment of ${formatCurrency(normalizedAmount, jemaw?.currency || "USD")} for you`,
       link: `/jemaws/${jemawId}`,
     }).catch(console.error);
   }
@@ -178,22 +182,30 @@ export async function approveSettlement(
   // Approve the settlement and update balances in a transaction
   await db.transaction(async (tx) => {
     // Update settlement status to approved
-    await tx
+    const [approvedSettlement] = await tx
       .update(settlements)
       .set({
         status: "approved",
         approvedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(settlements.id, settlementId));
+      .where(
+        and(
+          eq(settlements.id, settlementId),
+          eq(settlements.status, "pending")
+        )
+      )
+      .returning({ id: settlements.id });
 
-    const settlementAmount = parseFloat(settlement.amount);
+    if (!approvedSettlement) {
+      throw new Error("This settlement has already been processed");
+    }
 
     // Update payer's balance (increase - less negative / more positive)
     await tx
       .update(jemawMembers)
       .set({
-        balance: sql`${jemawMembers.balance} + ${settlementAmount.toFixed(2)}`,
+        balance: sql`${jemawMembers.balance} + ${settlement.amount}`,
       })
       .where(
         and(
@@ -206,7 +218,7 @@ export async function approveSettlement(
     await tx
       .update(jemawMembers)
       .set({
-        balance: sql`${jemawMembers.balance} - ${settlementAmount.toFixed(2)}`,
+        balance: sql`${jemawMembers.balance} - ${settlement.amount}`,
       })
       .where(
         and(
@@ -273,14 +285,24 @@ export async function rejectSettlement(input: {
     throw new Error("Only the payment receiver can reject this settlement");
   }
 
-  await db
+  const [rejectedSettlement] = await db
     .update(settlements)
     .set({
       status: "rejected",
       rejectionReason: reason,
       updatedAt: new Date(),
     })
-    .where(eq(settlements.id, settlementId));
+    .where(
+      and(
+        eq(settlements.id, settlementId),
+        eq(settlements.status, "pending")
+      )
+    )
+    .returning({ id: settlements.id });
+
+  if (!rejectedSettlement) {
+    throw new Error("This settlement has already been processed");
+  }
 
   revalidatePath(`/jemaws/${settlement.jemawId}`);
   revalidatePath("/pending");
