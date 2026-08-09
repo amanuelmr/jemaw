@@ -8,7 +8,7 @@ import { EditJemawDialog } from "./edit-jemaw-dialog";
 import { SettleUpDialog } from "./settle-up-dialog";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, ArrowLeftRight, UserPlus, ArrowLeft, Settings, BarChart2 } from "lucide-react";
+import { Plus, ArrowLeftRight, UserPlus, ArrowLeft, Settings, BarChart2, Download } from "lucide-react";
 
 export default async function JemawPage({
   params,
@@ -83,6 +83,12 @@ export default async function JemawPage({
                 Stats
               </Button>
             </Link>
+            <a href={`/api/jemaws/${id}/export`} download>
+              <Button variant="outline" size="sm" className="h-8 text-xs">
+                <Download className="w-3.5 h-3.5 mr-1.5" />
+                Export
+              </Button>
+            </a>
             <InviteMemberDialog jemawId={id}>
               <Button variant="outline" size="sm" className="h-8 text-xs">
                 <UserPlus className="w-3.5 h-3.5 mr-1.5" />
