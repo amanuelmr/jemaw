@@ -59,6 +59,23 @@ export function subtractMoney(
   );
 }
 
+export function sumMoney(amounts: string[], currency: string): string {
+  const total = amounts.reduce(
+    (sum, amount) => sum + parseMinorUnits(amount, currency),
+    0n
+  );
+  return formatMinorUnits(total, currency);
+}
+
+export function assertBalancedMoney(
+  amounts: string[],
+  currency: string
+): void {
+  if (parseMinorUnits(sumMoney(amounts, currency), currency) !== 0n) {
+    throw new Error("Financial entries must balance to zero");
+  }
+}
+
 export function splitMoneyEqually(
   amount: string,
   participantIds: string[],

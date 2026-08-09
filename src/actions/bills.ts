@@ -7,16 +7,20 @@ import {
   jemawMembers,
   jemaws,
   users,
+  ledgerEntries,
+  activityLogs,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/session";
 import { notifyUsersForBillApproval } from "@/lib/email";
 import { formatCurrency } from "@/lib/utils";
 import {
+  assertBalancedMoney,
   normalizeMoney,
+  formatMinorUnits,
+  parseMinorUnits,
   splitMoneyEqually,
-  subtractMoney,
+  sumMoney,
 } from "@/lib/money";
-import { logActivity } from "@/actions/activity";
 import { createNotification } from "@/actions/notifications";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
@@ -121,6 +125,15 @@ export async function createBill(input: CreateBillInput) {
 
     await tx.insert(billSplits).values(splitValues);
 
+    await tx.insert(activityLogs).values({
+      jemawId,
+      userId,
+      action: "bill.created",
+      targetType: "bill",
+      targetId: newBill.id,
+      metadata: JSON.stringify({ description, amount: normalizedAmount }),
+    });
+
     return newBill;
   });
 
@@ -168,16 +181,6 @@ export async function createBill(input: CreateBillInput) {
   }
 
   revalidatePath(`/jemaws/${jemawId}`);
-
-  // Log activity (fire and forget)
-  logActivity({
-    jemawId,
-    userId,
-    action: "bill.created",
-    targetType: "bill",
-    targetId: result.id,
-    metadata: { description, amount: normalizedAmount },
-  }).catch(console.error);
 
   return {
     success: true,
@@ -259,60 +262,90 @@ export async function approveBill(input: z.infer<typeof approveBillSchema>) {
 
     // Update balances for the payer (positive balance - they are owed money)
     // Calculate total owed to payer (exclude their own portion if they're in the split)
-    const payerSplit = bill.splits.find((s) => s.userId === bill.paidById);
-    const payerOwedAmount = payerSplit
-      ? subtractMoney(bill.amount, payerSplit.amount, bill.jemaw.currency)
-      : bill.amount;
+    const payerOwedAmount = sumMoney(
+      bill.splits
+        .filter((split) => split.userId !== bill.paidById)
+        .map((split) => split.amount),
+      bill.jemaw.currency
+    );
 
-    await tx
-      .update(jemawMembers)
-      .set({
-        balance: sql`${jemawMembers.balance} + ${payerOwedAmount}`,
-      })
-      .where(
-        and(
-          eq(jemawMembers.jemawId, bill.jemawId),
-          eq(jemawMembers.userId, bill.paidById)
-        )
-      );
+    const entries: Array<typeof ledgerEntries.$inferInsert> = [];
+    if (parseMinorUnits(payerOwedAmount, bill.jemaw.currency) > 0n) {
+      entries.push({
+        jemawId: bill.jemawId,
+        userId: bill.paidById,
+        currency: bill.jemaw.currency,
+        amount: payerOwedAmount,
+        sourceType: "bill",
+        sourceId: bill.id,
+        description: bill.description,
+      });
+    }
 
-    // Update balances for split users (negative balance - they owe money)
-    // Skip the payer if they're in the split (their positive adjustment handles it)
     for (const split of bill.splits) {
       if (split.userId !== bill.paidById) {
-        await tx
+        entries.push({
+          jemawId: bill.jemawId,
+          userId: split.userId,
+          currency: bill.jemaw.currency,
+          amount: formatMinorUnits(
+            -parseMinorUnits(split.amount, bill.jemaw.currency),
+            bill.jemaw.currency
+          ),
+          sourceType: "bill",
+          sourceId: bill.id,
+          description: bill.description,
+        });
+      }
+    }
+
+    if (entries.length > 0) {
+      assertBalancedMoney(
+        entries.map((entry) => entry.amount),
+        bill.jemaw.currency
+      );
+      await tx.insert(ledgerEntries).values(entries);
+
+      for (const entry of entries) {
+        const [updatedMember] = await tx
           .update(jemawMembers)
           .set({
-            balance: sql`${jemawMembers.balance} - ${split.amount}`,
+            balance: sql`${jemawMembers.balance} + ${entry.amount}`,
           })
           .where(
             and(
               eq(jemawMembers.jemawId, bill.jemawId),
-              eq(jemawMembers.userId, split.userId)
+              eq(jemawMembers.userId, entry.userId)
             )
-          );
+          )
+          .returning({ id: jemawMembers.id });
+
+        if (!updatedMember) {
+          throw new Error("A bill participant is no longer in this group");
+        }
       }
     }
-  });
 
-  revalidatePath(`/jemaws/${bill.jemawId}`);
-
-  // Log activity and notify bill creator (fire and forget)
-  Promise.all([
-    logActivity({
+    await tx.insert(activityLogs).values({
       jemawId: bill.jemawId,
       userId,
       action: "bill.approved",
       targetType: "bill",
       targetId: billId,
-      metadata: { description: bill.description, amount: bill.amount },
-    }),
-    createNotification({
-      userId: bill.paidById,
-      message: `Your bill "${bill.description}" was approved`,
-      link: `/jemaws/${bill.jemawId}`,
-    }),
-  ]).catch(console.error);
+      metadata: JSON.stringify({
+        description: bill.description,
+        amount: bill.amount,
+      }),
+    });
+  });
+
+  revalidatePath(`/jemaws/${bill.jemawId}`);
+
+  createNotification({
+    userId: bill.paidById,
+    message: `Your bill "${bill.description}" was approved`,
+    link: `/jemaws/${bill.jemawId}`,
+  }).catch(console.error);
 
   return {
     success: true,
@@ -355,37 +388,40 @@ export async function rejectBill(input: z.infer<typeof approveBillSchema>) {
     throw new Error("Only users involved in this bill (excluding the payer) can reject it");
   }
 
-  const [rejectedBill] = await db
-    .update(bills)
-    .set({
-      status: "rejected",
-      updatedAt: new Date(),
-    })
-    .where(and(eq(bills.id, billId), eq(bills.status, "pending")))
-    .returning({ id: bills.id });
+  await db.transaction(async (tx) => {
+    const [rejectedBill] = await tx
+      .update(bills)
+      .set({
+        status: "rejected",
+        updatedAt: new Date(),
+      })
+      .where(and(eq(bills.id, billId), eq(bills.status, "pending")))
+      .returning({ id: bills.id });
 
-  if (!rejectedBill) {
-    throw new Error("This bill has already been processed");
-  }
+    if (!rejectedBill) {
+      throw new Error("This bill has already been processed");
+    }
 
-  revalidatePath(`/jemaws/${bill.jemawId}`);
-
-  // Log activity and notify bill creator (fire and forget)
-  Promise.all([
-    logActivity({
+    await tx.insert(activityLogs).values({
       jemawId: bill.jemawId,
       userId,
       action: "bill.rejected",
       targetType: "bill",
       targetId: billId,
-      metadata: { description: bill.description, amount: bill.amount },
-    }),
-    createNotification({
-      userId: bill.paidById,
-      message: `Your bill "${bill.description}" was rejected`,
-      link: `/jemaws/${bill.jemawId}`,
-    }),
-  ]).catch(console.error);
+      metadata: JSON.stringify({
+        description: bill.description,
+        amount: bill.amount,
+      }),
+    });
+  });
+
+  revalidatePath(`/jemaws/${bill.jemawId}`);
+
+  createNotification({
+    userId: bill.paidById,
+    message: `Your bill "${bill.description}" was rejected`,
+    link: `/jemaws/${bill.jemawId}`,
+  }).catch(console.error);
 
   return {
     success: true,

@@ -1,12 +1,18 @@
 "use server";
 
 import { db } from "@/db";
-import { settlements, jemawMembers, jemaws, users } from "@/db/schema";
+import {
+  settlements,
+  jemawMembers,
+  jemaws,
+  users,
+  ledgerEntries,
+  activityLogs,
+} from "@/db/schema";
 import { requireAuth } from "@/lib/session";
 import { notifyReceiverForSettlementApproval } from "@/lib/email";
 import { formatCurrency } from "@/lib/utils";
-import { normalizeMoney } from "@/lib/money";
-import { logActivity } from "@/actions/activity";
+import { assertBalancedMoney, normalizeMoney } from "@/lib/money";
 import { createNotification } from "@/actions/notifications";
 import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -64,6 +70,7 @@ export async function createSettlement(input: CreateSettlementInput) {
       eq(jemawMembers.jemawId, jemawId),
       eq(jemawMembers.userId, receiverId)
     ),
+    with: { user: true },
   });
 
   if (!receiverMembership) {
@@ -72,19 +79,34 @@ export async function createSettlement(input: CreateSettlementInput) {
 
   const normalizedAmount = normalizeMoney(amount, payerMembership.jemaw.currency);
 
-  // Create the settlement with pending status
-  const [newSettlement] = await db
-    .insert(settlements)
-    .values({
+  const newSettlement = await db.transaction(async (tx) => {
+    const [createdSettlement] = await tx
+      .insert(settlements)
+      .values({
+        jemawId,
+        payerId: userId,
+        receiverId,
+        amount: normalizedAmount,
+        description: description || null,
+        paymentProofUrl,
+        status: "pending",
+      })
+      .returning();
+
+    await tx.insert(activityLogs).values({
       jemawId,
-      payerId: userId,
-      receiverId,
-      amount: normalizedAmount,
-      description: description || null,
-      paymentProofUrl,
-      status: "pending",
-    })
-    .returning();
+      userId,
+      action: "settlement.created",
+      targetType: "settlement",
+      targetId: createdSettlement.id,
+      metadata: JSON.stringify({
+        amount: normalizedAmount,
+        receiverName: receiverMembership.user.name,
+      }),
+    });
+
+    return createdSettlement;
+  });
 
   // Get jemaw and user info for notification
   const jemaw = await db.query.jemaws.findFirst({
@@ -117,17 +139,7 @@ export async function createSettlement(input: CreateSettlementInput) {
 
   revalidatePath(`/jemaws/${jemawId}`);
 
-  // Log activity (fire and forget)
   if (receiver && payer) {
-    logActivity({
-      jemawId,
-      userId,
-      action: "settlement.created",
-      targetType: "settlement",
-      targetId: newSettlement.id,
-      metadata: { amount: normalizedAmount, receiverName: receiver.name },
-    }).catch(console.error);
-
     createNotification({
       userId: receiverId,
       message: `${payer.name} recorded a payment of ${formatCurrency(normalizedAmount, jemaw?.currency || "USD")} for you`,
@@ -201,50 +213,69 @@ export async function approveSettlement(
       throw new Error("This settlement has already been processed");
     }
 
-    // Update payer's balance (increase - less negative / more positive)
-    await tx
-      .update(jemawMembers)
-      .set({
-        balance: sql`${jemawMembers.balance} + ${settlement.amount}`,
-      })
-      .where(
-        and(
-          eq(jemawMembers.jemawId, settlement.jemawId),
-          eq(jemawMembers.userId, settlement.payerId)
+    const entries: Array<typeof ledgerEntries.$inferInsert> = [
+      {
+        jemawId: settlement.jemawId,
+        userId: settlement.payerId,
+        currency: settlement.jemaw.currency,
+        amount: settlement.amount,
+        sourceType: "settlement",
+        sourceId: settlement.id,
+        description: settlement.description,
+      },
+      {
+        jemawId: settlement.jemawId,
+        userId: settlement.receiverId,
+        currency: settlement.jemaw.currency,
+        amount: `-${settlement.amount}`,
+        sourceType: "settlement",
+        sourceId: settlement.id,
+        description: settlement.description,
+      },
+    ];
+
+    assertBalancedMoney(
+      entries.map((entry) => entry.amount),
+      settlement.jemaw.currency
+    );
+    await tx.insert(ledgerEntries).values(entries);
+
+    for (const entry of entries) {
+      const [updatedMember] = await tx
+        .update(jemawMembers)
+        .set({
+          balance: sql`${jemawMembers.balance} + ${entry.amount}`,
+        })
+        .where(
+          and(
+            eq(jemawMembers.jemawId, settlement.jemawId),
+            eq(jemawMembers.userId, entry.userId)
+          )
         )
-      );
+        .returning({ id: jemawMembers.id });
 
-    // Update receiver's balance (decrease - less positive / more negative)
-    await tx
-      .update(jemawMembers)
-      .set({
-        balance: sql`${jemawMembers.balance} - ${settlement.amount}`,
-      })
-      .where(
-        and(
-          eq(jemawMembers.jemawId, settlement.jemawId),
-          eq(jemawMembers.userId, settlement.receiverId)
-        )
-      );
-  });
+      if (!updatedMember) {
+        throw new Error("A settlement participant is no longer in this group");
+      }
+    }
 
-  revalidatePath(`/jemaws/${settlement.jemawId}`);
-
-  Promise.all([
-    logActivity({
+    await tx.insert(activityLogs).values({
       jemawId: settlement.jemawId,
       userId,
       action: "settlement.approved",
       targetType: "settlement",
       targetId: settlementId,
-      metadata: { amount: settlement.amount },
-    }),
-    createNotification({
-      userId: settlement.payerId,
-      message: `Your payment of ${formatCurrency(settlement.amount, settlement.jemaw.currency)} was confirmed`,
-      link: `/jemaws/${settlement.jemawId}`,
-    }),
-  ]).catch(console.error);
+      metadata: JSON.stringify({ amount: settlement.amount }),
+    });
+  });
+
+  revalidatePath(`/jemaws/${settlement.jemawId}`);
+
+  createNotification({
+    userId: settlement.payerId,
+    message: `Your payment of ${formatCurrency(settlement.amount, settlement.jemaw.currency)} was confirmed`,
+    link: `/jemaws/${settlement.jemawId}`,
+  }).catch(console.error);
 
   return {
     success: true,
@@ -285,43 +316,44 @@ export async function rejectSettlement(input: {
     throw new Error("Only the payment receiver can reject this settlement");
   }
 
-  const [rejectedSettlement] = await db
-    .update(settlements)
-    .set({
-      status: "rejected",
-      rejectionReason: reason,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(settlements.id, settlementId),
-        eq(settlements.status, "pending")
+  await db.transaction(async (tx) => {
+    const [rejectedSettlement] = await tx
+      .update(settlements)
+      .set({
+        status: "rejected",
+        rejectionReason: reason,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(settlements.id, settlementId),
+          eq(settlements.status, "pending")
+        )
       )
-    )
-    .returning({ id: settlements.id });
+      .returning({ id: settlements.id });
 
-  if (!rejectedSettlement) {
-    throw new Error("This settlement has already been processed");
-  }
+    if (!rejectedSettlement) {
+      throw new Error("This settlement has already been processed");
+    }
 
-  revalidatePath(`/jemaws/${settlement.jemawId}`);
-  revalidatePath("/pending");
-
-  Promise.all([
-    logActivity({
+    await tx.insert(activityLogs).values({
       jemawId: settlement.jemawId,
       userId,
       action: "settlement.rejected",
       targetType: "settlement",
       targetId: settlementId,
-      metadata: { amount: settlement.amount, reason },
-    }),
-    createNotification({
-      userId: settlement.payerId,
-      message: `Your payment of ${formatCurrency(settlement.amount, settlement.jemaw.currency)} was rejected: ${reason}`,
-      link: `/jemaws/${settlement.jemawId}`,
-    }),
-  ]).catch(console.error);
+      metadata: JSON.stringify({ amount: settlement.amount, reason }),
+    });
+  });
+
+  revalidatePath(`/jemaws/${settlement.jemawId}`);
+  revalidatePath("/pending");
+
+  createNotification({
+    userId: settlement.payerId,
+    message: `Your payment of ${formatCurrency(settlement.amount, settlement.jemaw.currency)} was rejected: ${reason}`,
+    link: `/jemaws/${settlement.jemawId}`,
+  }).catch(console.error);
 
   return {
     success: true,

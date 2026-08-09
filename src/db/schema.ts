@@ -25,6 +25,13 @@ export const settlementStatusEnum = pgEnum("settlement_status", [
   "rejected",
 ]);
 
+export const ledgerSourceTypeEnum = pgEnum("ledger_source_type", [
+  "bill",
+  "settlement",
+  "reversal",
+  "adjustment",
+]);
+
 export const billCategoryEnum = pgEnum("bill_category", [
   "breakfast",
   "lunch",
@@ -303,6 +310,42 @@ export const notifications = pgTable(
   ]
 );
 
+// Append-only financial entries. jemaw_members.balance is a rebuildable cache.
+export const ledgerEntries = pgTable(
+  "ledger_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    jemawId: uuid("jemaw_id")
+      .notNull()
+      .references(() => jemaws.id, { onDelete: "restrict" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    currency: text("currency").notNull(),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    sourceType: ledgerSourceTypeEnum("source_type").notNull(),
+    sourceId: uuid("source_id").notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("ledger_entries_jemaw_created_idx").on(
+      table.jemawId,
+      table.createdAt
+    ),
+    index("ledger_entries_user_created_idx").on(
+      table.userId,
+      table.createdAt
+    ),
+    uniqueIndex("ledger_entries_source_user_unique").on(
+      table.sourceType,
+      table.sourceId,
+      table.userId
+    ),
+    check("ledger_entries_amount_nonzero", sql`${table.amount} <> 0`),
+  ]
+);
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
@@ -317,6 +360,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   sentInvitations: many(jemawInvitations),
   activityLogs: many(activityLogs),
   notifications: many(notifications),
+  ledgerEntries: many(ledgerEntries),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -343,6 +387,7 @@ export const jemawsRelations = relations(jemaws, ({ one, many }) => ({
   settlements: many(settlements),
   invitations: many(jemawInvitations),
   activityLogs: many(activityLogs),
+  ledgerEntries: many(ledgerEntries),
 }));
 
 export const jemawMembersRelations = relations(jemawMembers, ({ one }) => ({
@@ -434,6 +479,17 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
+export const ledgerEntriesRelations = relations(ledgerEntries, ({ one }) => ({
+  jemaw: one(jemaws, {
+    fields: [ledgerEntries.jemawId],
+    references: [jemaws.id],
+  }),
+  user: one(users, {
+    fields: [ledgerEntries.userId],
+    references: [users.id],
+  }),
+}));
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -452,6 +508,7 @@ export type NewSettlement = typeof settlements.$inferInsert;
 
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
+export type LedgerEntry = typeof ledgerEntries.$inferSelect;
 
 export type BillStatus = "pending" | "approved" | "rejected";
 export type SettlementStatus = "pending" | "approved" | "rejected";

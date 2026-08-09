@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  assertBalancedMoney,
   formatMinorUnits,
   normalizeMoney,
   parseMinorUnits,
   splitMoneyEqually,
   subtractMoney,
+  sumMoney,
 } from "../src/lib/money.ts";
 
 test("splits remainder cents without losing money", () => {
@@ -34,6 +36,7 @@ test("respects zero-decimal currencies", () => {
 test("normalizes and subtracts money without floating point", () => {
   assert.equal(normalizeMoney("001.2", "USD"), "1.20");
   assert.equal(subtractMoney("10.00", "3.34", "USD"), "6.66");
+  assert.equal(sumMoney(["3.33", "3.33"], "USD"), "6.66");
   assert.equal(formatMinorUnits(-125n, "USD"), "-1.25");
 });
 
@@ -42,4 +45,9 @@ test("rejects invalid precision and number formats", () => {
   assert.throws(() => parseMinorUnits("1.50", "JPY"));
   assert.throws(() => parseMinorUnits("1e3", "USD"));
   assert.throws(() => splitMoneyEqually("0.01", ["a", "b"], "USD"));
+});
+
+test("enforces zero-sum financial entries", () => {
+  assert.doesNotThrow(() => assertBalancedMoney(["6.66", "-3.33", "-3.33"], "USD"));
+  assert.throws(() => assertBalancedMoney(["6.67", "-3.33", "-3.33"], "USD"));
 });
