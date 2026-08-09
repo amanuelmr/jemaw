@@ -4,16 +4,14 @@ import { db } from "@/db";
 import {
   settlements,
   jemawMembers,
-  jemaws,
-  users,
   ledgerEntries,
   activityLogs,
+  notifications,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/session";
 import { notifyReceiverForSettlementApproval } from "@/lib/email";
 import { formatCurrency } from "@/lib/utils";
 import { assertBalancedMoney, normalizeMoney } from "@/lib/money";
-import { createNotification } from "@/lib/notifications";
 import { requireActiveJemawMembership } from "@/lib/authorization";
 import { isTrustedCloudinaryImageUrl } from "@/lib/uploads";
 import { eq, and, sql } from "drizzle-orm";
@@ -116,47 +114,31 @@ export async function createSettlement(input: CreateSettlementInput) {
       }),
     });
 
+    await tx.insert(notifications).values({
+      userId: receiverId,
+      message: `${session.user.name} recorded a payment of ${formatCurrency(normalizedAmount, payerMembership.jemaw.currency)} for you`,
+      link: `/jemaws/${jemawId}`,
+      read: false,
+    });
+
     return createdSettlement;
   });
 
-  // Get jemaw and user info for notification
-  const jemaw = await db.query.jemaws.findFirst({
-    where: eq(jemaws.id, jemawId),
-  });
-
-  const payer = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-  });
-
-  const receiver = await db.query.users.findFirst({
-    where: eq(users.id, receiverId),
-  });
-
   // Send notification to receiver
-  if (receiver && payer) {
-    notifyReceiverForSettlementApproval({
-      settlementId: newSettlement.id,
-      jemawId,
-      jemawName: jemaw?.name || "Unknown Group",
-      description: description || `Payment from ${payer.name}`,
-      amount: formatCurrency(normalizedAmount, jemaw?.currency || "USD"),
-      payerName: payer.name,
-      receiver: {
-        email: receiver.email,
-        name: receiver.name,
-      },
-    }).catch(console.error);
-  }
+  notifyReceiverForSettlementApproval({
+    settlementId: newSettlement.id,
+    jemawId,
+    jemawName: payerMembership.jemaw.name,
+    description: description || `Payment from ${session.user.name}`,
+    amount: formatCurrency(normalizedAmount, payerMembership.jemaw.currency),
+    payerName: session.user.name,
+    receiver: {
+      email: receiverMembership.user.email,
+      name: receiverMembership.user.name,
+    },
+  }).catch(console.error);
 
   revalidatePath(`/jemaws/${jemawId}`);
-
-  if (receiver && payer) {
-    createNotification({
-      userId: receiverId,
-      message: `${payer.name} recorded a payment of ${formatCurrency(normalizedAmount, jemaw?.currency || "USD")} for you`,
-      link: `/jemaws/${jemawId}`,
-    }).catch(console.error);
-  }
 
   return {
     success: true,
@@ -281,15 +263,16 @@ export async function approveSettlement(
       targetId: settlementId,
       metadata: JSON.stringify({ amount: settlement.amount }),
     });
+
+    await tx.insert(notifications).values({
+      userId: settlement.payerId,
+      message: `Your payment of ${formatCurrency(settlement.amount, settlement.jemaw.currency)} was confirmed`,
+      link: `/jemaws/${settlement.jemawId}`,
+      read: false,
+    });
   });
 
   revalidatePath(`/jemaws/${settlement.jemawId}`);
-
-  createNotification({
-    userId: settlement.payerId,
-    message: `Your payment of ${formatCurrency(settlement.amount, settlement.jemaw.currency)} was confirmed`,
-    link: `/jemaws/${settlement.jemawId}`,
-  }).catch(console.error);
 
   return {
     success: true,
@@ -362,16 +345,17 @@ export async function rejectSettlement(input: {
       targetId: settlementId,
       metadata: JSON.stringify({ amount: settlement.amount, reason }),
     });
+
+    await tx.insert(notifications).values({
+      userId: settlement.payerId,
+      message: `Your payment of ${formatCurrency(settlement.amount, settlement.jemaw.currency)} was rejected: ${reason}`,
+      link: `/jemaws/${settlement.jemawId}`,
+      read: false,
+    });
   });
 
   revalidatePath(`/jemaws/${settlement.jemawId}`);
   revalidatePath("/pending");
-
-  createNotification({
-    userId: settlement.payerId,
-    message: `Your payment of ${formatCurrency(settlement.amount, settlement.jemaw.currency)} was rejected: ${reason}`,
-    link: `/jemaws/${settlement.jemawId}`,
-  }).catch(console.error);
 
   return {
     success: true,

@@ -2,7 +2,7 @@ import { type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { notifications } from "@/db/schema";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
           const fresh = await db.query.notifications.findMany({
             where: and(
               eq(notifications.userId, userId),
-              gt(notifications.createdAt, checkFrom)
+              gte(notifications.createdAt, checkFrom)
             ),
             orderBy: (n, { desc }) => [desc(n.createdAt)],
             limit: 20,

@@ -5,10 +5,10 @@ import {
   bills,
   billSplits,
   jemawMembers,
-  jemaws,
   users,
   ledgerEntries,
   activityLogs,
+  notifications,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/session";
 import { notifyUsersForBillApproval } from "@/lib/email";
@@ -24,7 +24,6 @@ import {
   splitMoneyEqually,
   sumMoney,
 } from "@/lib/money";
-import { createNotification } from "@/lib/notifications";
 import { requireActiveJemawMembership } from "@/lib/authorization";
 import { isTrustedCloudinaryImageUrl } from "@/lib/uploads";
 import { eq, and, sql, inArray } from "drizzle-orm";
@@ -170,6 +169,8 @@ export async function createBill(input: CreateBillInput) {
     );
   }
 
+  const eligibleApproverIds = splitUserIds.filter((id) => id !== userId);
+
   // Create bill and splits in a transaction
   const result = await db.transaction(async (tx) => {
     // Create the bill with pending status
@@ -209,50 +210,38 @@ export async function createBill(input: CreateBillInput) {
       }),
     });
 
+    if (eligibleApproverIds.length > 0) {
+      await tx.insert(notifications).values(
+        eligibleApproverIds.map((approverId) => ({
+          userId: approverId,
+          message: `${session.user.name} added a bill "${description}" (${formatCurrency(normalizedAmount, membership.jemaw.currency)}) — your approval needed`,
+          link: "/pending",
+          read: false,
+        }))
+      );
+    }
+
     return newBill;
   });
-
-  // Get jemaw info and eligible approvers for notification
-  const jemaw = await db.query.jemaws.findFirst({
-    where: eq(jemaws.id, jemawId),
-  });
-
-  // Get users who can approve (involved in split but not the payer)
-  const eligibleApproverIds = splitUserIds.filter((id) => id !== userId);
 
   if (eligibleApproverIds.length > 0) {
     const approvers = await db.query.users.findMany({
       where: inArray(users.id, eligibleApproverIds),
     });
 
-    const payer = await db.query.users.findFirst({
-      where: eq(users.id, userId),
-    });
-
     // Send notification emails (fire and forget)
     notifyUsersForBillApproval({
       billId: result.id,
       jemawId,
-      jemawName: jemaw?.name || "Unknown Group",
+      jemawName: membership.jemaw.name,
       description,
-      amount: formatCurrency(normalizedAmount, jemaw?.currency || "USD"),
-      paidByName: payer?.name || "Someone",
+      amount: formatCurrency(normalizedAmount, membership.jemaw.currency),
+      paidByName: session.user.name,
       eligibleApprovers: approvers.map((a) => ({
         email: a.email,
         name: a.name,
       })),
     }).catch(console.error);
-
-    // Push in-app notifications to each approver (fire and forget)
-    Promise.all(
-      eligibleApproverIds.map((approverId) =>
-        createNotification({
-          userId: approverId,
-          message: `${payer?.name ?? "Someone"} added a bill "${description}" (${formatCurrency(normalizedAmount, jemaw?.currency || "USD")}) — your approval needed`,
-          link: `/pending`,
-        })
-      )
-    ).catch(console.error);
   }
 
   revalidatePath(`/jemaws/${jemawId}`);
@@ -415,15 +404,16 @@ export async function approveBill(input: z.infer<typeof approveBillSchema>) {
         amount: bill.amount,
       }),
     });
+
+    await tx.insert(notifications).values({
+      userId: bill.paidById,
+      message: `Your bill "${bill.description}" was approved`,
+      link: `/jemaws/${bill.jemawId}`,
+      read: false,
+    });
   });
 
   revalidatePath(`/jemaws/${bill.jemawId}`);
-
-  createNotification({
-    userId: bill.paidById,
-    message: `Your bill "${bill.description}" was approved`,
-    link: `/jemaws/${bill.jemawId}`,
-  }).catch(console.error);
 
   return {
     success: true,
@@ -496,15 +486,16 @@ export async function rejectBill(input: z.infer<typeof approveBillSchema>) {
         amount: bill.amount,
       }),
     });
+
+    await tx.insert(notifications).values({
+      userId: bill.paidById,
+      message: `Your bill "${bill.description}" was rejected`,
+      link: `/jemaws/${bill.jemawId}`,
+      read: false,
+    });
   });
 
   revalidatePath(`/jemaws/${bill.jemawId}`);
-
-  createNotification({
-    userId: bill.paidById,
-    message: `Your bill "${bill.description}" was rejected`,
-    link: `/jemaws/${bill.jemawId}`,
-  }).catch(console.error);
 
   return {
     success: true,
