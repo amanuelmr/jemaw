@@ -7,8 +7,10 @@ import {
   uuid,
   pgEnum,
   index,
+  uniqueIndex,
+  check,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // Enums
 export const billStatusEnum = pgEnum("bill_status", [
@@ -125,6 +127,10 @@ export const jemawMembers = pgTable(
   (table) => [
     index("jemaw_members_jemaw_idx").on(table.jemawId),
     index("jemaw_members_user_idx").on(table.userId),
+    uniqueIndex("jemaw_members_jemaw_user_unique").on(
+      table.jemawId,
+      table.userId
+    ),
   ]
 );
 
@@ -176,6 +182,12 @@ export const bills = pgTable(
     index("bills_jemaw_idx").on(table.jemawId),
     index("bills_paid_by_idx").on(table.paidById),
     index("bills_status_idx").on(table.status),
+    index("bills_jemaw_status_created_idx").on(
+      table.jemawId,
+      table.status,
+      table.createdAt
+    ),
+    check("bills_amount_positive", sql`${table.amount} > 0`),
   ]
 );
 
@@ -196,6 +208,11 @@ export const billSplits = pgTable(
   (table) => [
     index("bill_splits_bill_idx").on(table.billId),
     index("bill_splits_user_idx").on(table.userId),
+    uniqueIndex("bill_splits_bill_user_unique").on(
+      table.billId,
+      table.userId
+    ),
+    check("bill_splits_amount_positive", sql`${table.amount} > 0`),
   ]
 );
 
@@ -227,6 +244,16 @@ export const settlements = pgTable(
     index("settlements_payer_idx").on(table.payerId),
     index("settlements_receiver_idx").on(table.receiverId),
     index("settlements_status_idx").on(table.status),
+    index("settlements_receiver_status_created_idx").on(
+      table.receiverId,
+      table.status,
+      table.createdAt
+    ),
+    check("settlements_amount_positive", sql`${table.amount} > 0`),
+    check(
+      "settlements_distinct_parties",
+      sql`${table.payerId} <> ${table.receiverId}`
+    ),
   ]
 );
 
@@ -268,6 +295,11 @@ export const notifications = pgTable(
   },
   (table) => [
     index("notifications_user_idx").on(table.userId),
+    index("notifications_user_read_created_idx").on(
+      table.userId,
+      table.read,
+      table.createdAt
+    ),
   ]
 );
 

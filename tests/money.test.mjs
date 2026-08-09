@@ -41,4 +41,5 @@ test("rejects invalid precision and number formats", () => {
   assert.throws(() => parseMinorUnits("1.001", "USD"));
   assert.throws(() => parseMinorUnits("1.50", "JPY"));
   assert.throws(() => parseMinorUnits("1e3", "USD"));
+  assert.throws(() => splitMoneyEqually("0.01", ["a", "b"], "USD"));
 });

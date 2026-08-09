@@ -8,6 +8,13 @@
       "when": 1774097956564,
       "tag": "0000_modern_mongoose",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786290824885,
+      "tag": "0001_little_katie_power",
+      "breakpoints": true
     }
   ]
 }

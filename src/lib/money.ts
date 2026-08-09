@@ -77,6 +77,10 @@ export function splitMoneyEqually(
   const baseShare = total / count;
   const remainder = total % count;
 
+  if (baseShare === 0n) {
+    throw new Error("Amount is too small to split among these participants");
+  }
+
   return participantIds.map((userId, index) => {
     const extraUnit = BigInt(index) < remainder ? 1n : 0n;
     return {
