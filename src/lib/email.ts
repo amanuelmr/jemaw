@@ -39,7 +39,10 @@ export async function sendPendingApprovalEmail({
   jemawId,
   itemId,
 }: SendPendingApprovalEmailParams) {
-  const actionUrl = `${APP_URL}/jemaws/${jemawId}`;
+  const actionUrl =
+    `${APP_URL}/pending?type=${type}` +
+    `&item=${encodeURIComponent(itemId)}` +
+    `&group=${encodeURIComponent(jemawId)}`;
 
   try {
     const html = await render(
