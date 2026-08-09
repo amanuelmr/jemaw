@@ -50,12 +50,6 @@ export function StatsCharts({
   memberBalances: BalanceData[];
   currency: string;
 }) {
-  const positiveBalances = memberBalances.filter((m) => m.balance > 0);
-  const negativeBalances = memberBalances.filter((m) => m.balance < 0).map((m) => ({
-    ...m,
-    balance: Math.abs(m.balance),
-  }));
-
   return (
     <div className="space-y-8">
       {byCategory.length > 0 && (
