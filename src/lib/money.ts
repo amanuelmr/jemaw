@@ -106,3 +106,137 @@ export function splitMoneyEqually(
     };
   });
 }
+
+type WeightedParticipant = { userId: string; weight: bigint };
+
+function allocateMoneyByWeight(
+  amount: string,
+  participants: WeightedParticipant[],
+  currency: string
+): Array<{ userId: string; amount: string }> {
+  if (participants.length === 0) {
+    throw new Error("At least one participant is required");
+  }
+
+  const total = parseMinorUnits(amount, currency);
+  if (total <= 0n) throw new Error("Amount must be greater than zero");
+  if (participants.some((participant) => participant.weight <= 0n)) {
+    throw new Error("Every split value must be greater than zero");
+  }
+
+  const totalWeight = participants.reduce(
+    (sum, participant) => sum + participant.weight,
+    0n
+  );
+  const allocations = participants.map((participant, index) => {
+    const weightedAmount = total * participant.weight;
+    return {
+      userId: participant.userId,
+      units: weightedAmount / totalWeight,
+      remainder: weightedAmount % totalWeight,
+      index,
+    };
+  });
+
+  let undistributed =
+    total - allocations.reduce((sum, allocation) => sum + allocation.units, 0n);
+  const remainderOrder = [...allocations].sort(
+    (left, right) =>
+      Number(right.remainder - left.remainder) || left.index - right.index
+  );
+  for (const allocation of remainderOrder) {
+    if (undistributed === 0n) break;
+    allocation.units += 1n;
+    undistributed -= 1n;
+  }
+
+  if (allocations.some((allocation) => allocation.units === 0n)) {
+    throw new Error("Amount is too small for the selected split values");
+  }
+
+  return allocations
+    .sort((left, right) => left.index - right.index)
+    .map((allocation) => ({
+      userId: allocation.userId,
+      amount: formatMinorUnits(allocation.units, currency),
+    }));
+}
+
+function parsePercentageBasisPoints(value: string): bigint {
+  const match = value.trim().match(/^(\d{1,3})(?:\.(\d{1,2}))?$/);
+  if (!match) {
+    throw new Error("Percentages support up to two decimal places");
+  }
+
+  const basisPoints =
+    BigInt(match[1]) * 100n +
+    BigInt((match[2] ?? "").padEnd(2, "0"));
+  if (basisPoints <= 0n || basisPoints > 10000n) {
+    throw new Error("Each percentage must be greater than 0 and at most 100");
+  }
+  return basisPoints;
+}
+
+export function splitMoneyByPercentages(
+  amount: string,
+  percentages: Array<{ userId: string; percentage: string }>,
+  currency: string
+) {
+  const participants = percentages.map((split) => ({
+    userId: split.userId,
+    weight: parsePercentageBasisPoints(split.percentage),
+  }));
+  const totalPercentage = participants.reduce(
+    (sum, participant) => sum + participant.weight,
+    0n
+  );
+  if (totalPercentage !== 10000n) {
+    throw new Error("Percentages must add up to exactly 100%");
+  }
+  return allocateMoneyByWeight(amount, participants, currency);
+}
+
+export function splitMoneyByShares(
+  amount: string,
+  shares: Array<{ userId: string; shares: string }>,
+  currency: string
+) {
+  const participants = shares.map((split) => {
+    const value = split.shares.trim();
+    if (!/^\d{1,6}$/.test(value) || BigInt(value) <= 0n) {
+      throw new Error("Shares must be positive whole numbers");
+    }
+    return { userId: split.userId, weight: BigInt(value) };
+  });
+  return allocateMoneyByWeight(amount, participants, currency);
+}
+
+export function normalizeExactMoneySplits(
+  amount: string,
+  splits: Array<{ userId: string; amount: string }>,
+  currency: string
+) {
+  if (splits.length === 0) {
+    throw new Error("At least one participant is required");
+  }
+
+  const normalized = splits.map((split) => {
+    const splitAmount = normalizeMoney(split.amount, currency);
+    if (parseMinorUnits(splitAmount, currency) <= 0n) {
+      throw new Error("Every split amount must be greater than zero");
+    }
+    return { userId: split.userId, amount: splitAmount };
+  });
+
+  if (
+    parseMinorUnits(
+      sumMoney(normalized.map((split) => split.amount), currency),
+      currency
+    ) !==
+    parseMinorUnits(amount, currency)
+  ) {
+    throw new Error("Exact split amounts must add up to the bill total");
+  }
+
+  return normalized;
+}

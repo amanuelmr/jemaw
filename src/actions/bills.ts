@@ -16,8 +16,11 @@ import { formatCurrency } from "@/lib/utils";
 import {
   assertBalancedMoney,
   normalizeMoney,
+  normalizeExactMoneySplits,
   formatMinorUnits,
   parseMinorUnits,
+  splitMoneyByPercentages,
+  splitMoneyByShares,
   splitMoneyEqually,
   sumMoney,
 } from "@/lib/money";
@@ -53,7 +56,16 @@ const createBillSchema = z.object({
     "healthcare",
     "other",
   ]),
-  splitUserIds: z.array(z.string()).min(1, "At least one user must be in the split"),
+  splitType: z.enum(["equal", "exact", "percentage", "shares"]),
+  splits: z
+    .array(
+      z.object({
+        userId: z.string().min(1),
+        value: z.string().trim().max(32).optional(),
+      })
+    )
+    .min(1, "At least one user must be in the split")
+    .max(100),
   receiptUrl: z
     .string()
     .url()
@@ -75,7 +87,23 @@ export async function createBill(input: CreateBillInput) {
   const userId = session.user.id;
 
   const validatedData = createBillSchema.parse(input);
-  const { jemawId, description, amount, category, splitUserIds, receiptUrl } = validatedData;
+  const {
+    jemawId,
+    description,
+    amount,
+    category,
+    splitType,
+    splits,
+    receiptUrl,
+  } = validatedData;
+  const splitUserIds = splits.map((split) => split.userId);
+
+  if (new Set(splitUserIds).size !== splitUserIds.length) {
+    throw new Error("A participant can only appear once in a split");
+  }
+  if (!splitUserIds.some((splitUserId) => splitUserId !== userId)) {
+    throw new Error("A shared bill must include at least one other group member");
+  }
 
   // Verify user is a member of the jemaw
   const membership = await db.query.jemawMembers.findFirst({
@@ -106,11 +134,41 @@ export async function createBill(input: CreateBillInput) {
   }
 
   const normalizedAmount = normalizeMoney(amount, membership.jemaw.currency);
-  const splitAmounts = splitMoneyEqually(
-    normalizedAmount,
-    splitUserIds,
-    membership.jemaw.currency
-  );
+  let splitAmounts: Array<{ userId: string; amount: string }>;
+  if (splitType === "equal") {
+    splitAmounts = splitMoneyEqually(
+      normalizedAmount,
+      splitUserIds,
+      membership.jemaw.currency
+    );
+  } else if (splitType === "exact") {
+    splitAmounts = normalizeExactMoneySplits(
+      normalizedAmount,
+      splits.map((split) => ({
+        userId: split.userId,
+        amount: split.value ?? "",
+      })),
+      membership.jemaw.currency
+    );
+  } else if (splitType === "percentage") {
+    splitAmounts = splitMoneyByPercentages(
+      normalizedAmount,
+      splits.map((split) => ({
+        userId: split.userId,
+        percentage: split.value ?? "",
+      })),
+      membership.jemaw.currency
+    );
+  } else {
+    splitAmounts = splitMoneyByShares(
+      normalizedAmount,
+      splits.map((split) => ({
+        userId: split.userId,
+        shares: split.value ?? "",
+      })),
+      membership.jemaw.currency
+    );
+  }
 
   // Create bill and splits in a transaction
   const result = await db.transaction(async (tx) => {
@@ -143,7 +201,12 @@ export async function createBill(input: CreateBillInput) {
       action: "bill.created",
       targetType: "bill",
       targetId: newBill.id,
-      metadata: JSON.stringify({ description, amount: normalizedAmount }),
+      metadata: JSON.stringify({
+        description,
+        amount: normalizedAmount,
+        splitType,
+        participantCount: splitAmounts.length,
+      }),
     });
 
     return newBill;

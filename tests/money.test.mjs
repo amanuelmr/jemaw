@@ -5,7 +5,10 @@ import {
   assertBalancedMoney,
   formatMinorUnits,
   normalizeMoney,
+  normalizeExactMoneySplits,
   parseMinorUnits,
+  splitMoneyByPercentages,
+  splitMoneyByShares,
   splitMoneyEqually,
   subtractMoney,
   sumMoney,
@@ -50,4 +53,77 @@ test("rejects invalid precision and number formats", () => {
 test("enforces zero-sum financial entries", () => {
   assert.doesNotThrow(() => assertBalancedMoney(["6.66", "-3.33", "-3.33"], "USD"));
   assert.throws(() => assertBalancedMoney(["6.67", "-3.33", "-3.33"], "USD"));
+});
+
+test("allocates percentages without losing remainder cents", () => {
+  assert.deepEqual(
+    splitMoneyByPercentages(
+      "10.00",
+      [
+        { userId: "a", percentage: "33.33" },
+        { userId: "b", percentage: "33.33" },
+        { userId: "c", percentage: "33.34" },
+      ],
+      "USD"
+    ),
+    [
+      { userId: "a", amount: "3.33" },
+      { userId: "b", amount: "3.33" },
+      { userId: "c", amount: "3.34" },
+    ]
+  );
+  assert.throws(() =>
+    splitMoneyByPercentages(
+      "10.00",
+      [
+        { userId: "a", percentage: "40" },
+        { userId: "b", percentage: "50" },
+      ],
+      "USD"
+    )
+  );
+});
+
+test("allocates weighted shares deterministically", () => {
+  assert.deepEqual(
+    splitMoneyByShares(
+      "10.00",
+      [
+        { userId: "a", shares: "1" },
+        { userId: "b", shares: "2" },
+      ],
+      "USD"
+    ),
+    [
+      { userId: "a", amount: "3.33" },
+      { userId: "b", amount: "6.67" },
+    ]
+  );
+});
+
+test("validates exact splits against the bill total", () => {
+  assert.deepEqual(
+    normalizeExactMoneySplits(
+      "10.00",
+      [
+        { userId: "a", amount: "4" },
+        { userId: "b", amount: "6.00" },
+      ],
+      "USD"
+    ),
+    [
+      { userId: "a", amount: "4.00" },
+      { userId: "b", amount: "6.00" },
+    ]
+  );
+  assert.throws(() =>
+    normalizeExactMoneySplits(
+      "10.00",
+      [
+        { userId: "a", amount: "4.00" },
+        { userId: "b", amount: "5.99" },
+      ],
+      "USD"
+    )
+  );
 });
