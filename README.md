@@ -82,6 +82,11 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 # Resend (Email)
 RESEND_API_KEY="re_your_resend_api_key"
 EMAIL_FROM="Jemaw <noreply@yourdomain.com>"
+
+# Cloudinary (server-side signed image uploads)
+CLOUDINARY_CLOUD_NAME="your-cloud-name"
+CLOUDINARY_API_KEY="your-api-key"
+CLOUDINARY_API_SECRET="your-api-secret"
 ```
 
 ### Database Setup

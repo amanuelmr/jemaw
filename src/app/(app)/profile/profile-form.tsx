@@ -38,7 +38,7 @@ export function ProfileForm({ user }: { user: User }) {
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) { toast.error("Please select an image file"); return; }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { toast.error("Please select a JPEG, PNG, or WebP image"); return; }
     if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5MB"); return; }
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
@@ -117,7 +117,7 @@ export function ProfileForm({ user }: { user: User }) {
           >
             Change photo
           </button>
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+          <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarChange} className="hidden" />
         </div>
 
         {/* Right settings panel */}

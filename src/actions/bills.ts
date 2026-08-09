@@ -23,6 +23,7 @@ import {
 } from "@/lib/money";
 import { createNotification } from "@/lib/notifications";
 import { requireActiveJemawMembership } from "@/lib/authorization";
+import { isTrustedCloudinaryImageUrl } from "@/lib/uploads";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -53,7 +54,14 @@ const createBillSchema = z.object({
     "other",
   ]),
   splitUserIds: z.array(z.string()).min(1, "At least one user must be in the split"),
-  receiptUrl: z.string().url().optional(),
+  receiptUrl: z
+    .string()
+    .url()
+    .refine(
+      (url) => isTrustedCloudinaryImageUrl(url, "receipts"),
+      "Receipt must come from the secure uploader"
+    )
+    .optional(),
 });
 
 const approveBillSchema = z.object({

@@ -15,6 +15,7 @@ import { formatCurrency } from "@/lib/utils";
 import { assertBalancedMoney, normalizeMoney } from "@/lib/money";
 import { createNotification } from "@/lib/notifications";
 import { requireActiveJemawMembership } from "@/lib/authorization";
+import { isTrustedCloudinaryImageUrl } from "@/lib/uploads";
 import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -31,7 +32,13 @@ const createSettlementSchema = z.object({
     { message: "Amount must be a positive number" }
   ),
   description: z.string().max(255).optional(),
-  paymentProofUrl: z.string().min(1, "Payment proof screenshot is required"),
+  paymentProofUrl: z
+    .string()
+    .url("Payment proof screenshot is required")
+    .refine(
+      (url) => isTrustedCloudinaryImageUrl(url, "payment-proofs"),
+      "Payment proof must come from the secure uploader"
+    ),
 });
 
 const approveSettlementSchema = z.object({
