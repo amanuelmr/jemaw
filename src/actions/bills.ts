@@ -21,7 +21,8 @@ import {
   splitMoneyEqually,
   sumMoney,
 } from "@/lib/money";
-import { createNotification } from "@/actions/notifications";
+import { createNotification } from "@/lib/notifications";
+import { requireActiveJemawMembership } from "@/lib/authorization";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -79,6 +80,9 @@ export async function createBill(input: CreateBillInput) {
 
   if (!membership) {
     throw new Error("You are not a member of this group");
+  }
+  if (membership.jemaw.archivedAt) {
+    throw new Error("This group is archived");
   }
 
   // Verify all split users are members of the jemaw
@@ -229,6 +233,9 @@ export async function approveBill(input: z.infer<typeof approveBillSchema>) {
   if (!membership) {
     throw new Error("You are not a member of this group");
   }
+  if (bill.jemaw.archivedAt) {
+    throw new Error("This group is archived");
+  }
 
   // APPROVAL RULE: The approver must be in the split but NOT the payer
   const isInSplit = bill.splits.some((split) => split.userId === userId);
@@ -364,6 +371,7 @@ export async function rejectBill(input: z.infer<typeof approveBillSchema>) {
     where: eq(bills.id, billId),
     with: {
       splits: true,
+      jemaw: true,
     },
   });
 
@@ -378,6 +386,10 @@ export async function rejectBill(input: z.infer<typeof approveBillSchema>) {
 
   if (bill.status === "rejected") {
     throw new Error("This bill has already been rejected");
+  }
+
+  if (bill.jemaw.archivedAt) {
+    throw new Error("This group is archived");
   }
 
   // Verify user is in the split but not the payer
@@ -434,16 +446,7 @@ export async function getBillsByJemaw(jemawId: string) {
   const userId = session.user.id;
 
   // Verify membership
-  const membership = await db.query.jemawMembers.findFirst({
-    where: and(
-      eq(jemawMembers.jemawId, jemawId),
-      eq(jemawMembers.userId, userId)
-    ),
-  });
-
-  if (!membership) {
-    throw new Error("You are not a member of this group");
-  }
+  await requireActiveJemawMembership(jemawId, userId);
 
   const jemawBills = await db.query.bills.findMany({
     where: eq(bills.jemawId, jemawId),
@@ -488,7 +491,9 @@ export async function getPendingBillsForUser() {
   return pendingBills
     .filter(
       (split) =>
-        split.bill.status === "pending" && split.bill.paidById !== userId
+        split.bill.status === "pending" &&
+        split.bill.paidById !== userId &&
+        !split.bill.jemaw.archivedAt
     )
     .map((split) => split.bill);
 }

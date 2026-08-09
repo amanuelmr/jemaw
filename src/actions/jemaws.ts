@@ -18,6 +18,7 @@ import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
 import { SUPPORTED_CURRENCIES } from "@/lib/constants";
 import { parseMinorUnits } from "@/lib/money";
+import { requireActiveJemawMembership } from "@/lib/authorization";
 
 async function assertMemberCanExit(jemawId: string, targetUserId: string) {
   const targetMembership = await db.query.jemawMembers.findFirst({
@@ -244,9 +245,11 @@ export async function inviteMember(input: InviteMemberInput) {
 
   const membership = await db.query.jemawMembers.findFirst({
     where: and(eq(jemawMembers.jemawId, jemawId), eq(jemawMembers.userId, userId)),
+    with: { jemaw: true },
   });
 
   if (!membership) throw new Error("You are not a member of this group");
+  if (membership.jemaw.archivedAt) throw new Error("This group is archived");
 
   const existingUser = await db.query.users.findFirst({
     where: eq(users.email, email),
@@ -371,11 +374,7 @@ export async function getJemawById(jemawId: string) {
   const session = await requireAuth();
   const userId = session.user.id;
 
-  const membership = await db.query.jemawMembers.findFirst({
-    where: and(eq(jemawMembers.jemawId, jemawId), eq(jemawMembers.userId, userId)),
-  });
-
-  if (!membership) throw new Error("You are not a member of this group");
+  const membership = await requireActiveJemawMembership(jemawId, userId);
 
   const jemaw = await db.query.jemaws.findFirst({
     where: and(eq(jemaws.id, jemawId), isNull(jemaws.archivedAt)),
@@ -411,11 +410,7 @@ export async function getSuggestedSettlements(jemawId: string) {
   const session = await requireAuth();
   const userId = session.user.id;
 
-  const membership = await db.query.jemawMembers.findFirst({
-    where: and(eq(jemawMembers.jemawId, jemawId), eq(jemawMembers.userId, userId)),
-  });
-
-  if (!membership) throw new Error("You are not a member of this group");
+  await requireActiveJemawMembership(jemawId, userId);
 
   const members = await db.query.jemawMembers.findMany({
     where: eq(jemawMembers.jemawId, jemawId),
@@ -473,11 +468,7 @@ export async function getJemawStats(jemawId: string) {
   const session = await requireAuth();
   const userId = session.user.id;
 
-  const membership = await db.query.jemawMembers.findFirst({
-    where: and(eq(jemawMembers.jemawId, jemawId), eq(jemawMembers.userId, userId)),
-  });
-
-  if (!membership) throw new Error("You are not a member of this group");
+  const membership = await requireActiveJemawMembership(jemawId, userId);
 
   const approvedBills = await db.query.bills.findMany({
     where: and(eq(bills.jemawId, jemawId), eq(bills.status, "approved")),
@@ -543,11 +534,7 @@ export async function getJemawMembers(jemawId: string) {
   const session = await requireAuth();
   const userId = session.user.id;
 
-  const membership = await db.query.jemawMembers.findFirst({
-    where: and(eq(jemawMembers.jemawId, jemawId), eq(jemawMembers.userId, userId)),
-  });
-
-  if (!membership) throw new Error("You are not a member of this group");
+  await requireActiveJemawMembership(jemawId, userId);
 
   return db.query.jemawMembers.findMany({
     where: eq(jemawMembers.jemawId, jemawId),

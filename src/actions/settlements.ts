@@ -13,7 +13,8 @@ import { requireAuth } from "@/lib/session";
 import { notifyReceiverForSettlementApproval } from "@/lib/email";
 import { formatCurrency } from "@/lib/utils";
 import { assertBalancedMoney, normalizeMoney } from "@/lib/money";
-import { createNotification } from "@/actions/notifications";
+import { createNotification } from "@/lib/notifications";
+import { requireActiveJemawMembership } from "@/lib/authorization";
 import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -62,6 +63,9 @@ export async function createSettlement(input: CreateSettlementInput) {
 
   if (!payerMembership) {
     throw new Error("You are not a member of this group");
+  }
+  if (payerMembership.jemaw.archivedAt) {
+    throw new Error("This group is archived");
   }
 
   // Verify receiver is a member of the jemaw
@@ -190,6 +194,9 @@ export async function approveSettlement(
   if (settlement.receiverId !== userId) {
     throw new Error("Only the payment receiver can approve this settlement");
   }
+  if (settlement.jemaw.archivedAt) {
+    throw new Error("This group is archived");
+  }
 
   // Approve the settlement and update balances in a transaction
   await db.transaction(async (tx) => {
@@ -316,6 +323,10 @@ export async function rejectSettlement(input: {
     throw new Error("Only the payment receiver can reject this settlement");
   }
 
+  if (settlement.jemaw.archivedAt) {
+    throw new Error("This group is archived");
+  }
+
   await db.transaction(async (tx) => {
     const [rejectedSettlement] = await tx
       .update(settlements)
@@ -366,16 +377,7 @@ export async function getSettlementsByJemaw(jemawId: string) {
   const userId = session.user.id;
 
   // Verify membership
-  const membership = await db.query.jemawMembers.findFirst({
-    where: and(
-      eq(jemawMembers.jemawId, jemawId),
-      eq(jemawMembers.userId, userId)
-    ),
-  });
-
-  if (!membership) {
-    throw new Error("You are not a member of this group");
-  }
+  await requireActiveJemawMembership(jemawId, userId);
 
   const jemawSettlements = await db.query.settlements.findMany({
     where: eq(settlements.jemawId, jemawId),
@@ -406,5 +408,5 @@ export async function getPendingSettlementsForUser() {
     orderBy: (settlements, { desc }) => [desc(settlements.createdAt)],
   });
 
-  return pendingSettlements;
+  return pendingSettlements.filter((settlement) => !settlement.jemaw.archivedAt);
 }

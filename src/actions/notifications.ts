@@ -5,18 +5,6 @@ import { notifications } from "@/db/schema";
 import { requireAuth } from "@/lib/session";
 import { and, eq } from "drizzle-orm";
 
-export async function createNotification({
-  userId,
-  message,
-  link,
-}: {
-  userId: string;
-  message: string;
-  link: string;
-}) {
-  await db.insert(notifications).values({ userId, message, link, read: false });
-}
-
 export async function getNotifications() {
   const session = await requireAuth();
   const userId = session.user.id;
