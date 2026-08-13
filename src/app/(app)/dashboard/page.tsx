@@ -1,135 +1,109 @@
 import Link from "next/link";
-import { ArrowDownLeft, ArrowUpRight, Check, Plus } from "lucide-react";
-import { getMyJemaws } from "@/actions/jemaws";
+import { Check, Plus } from "lucide-react";
+import { getMyRecentActivity } from "@/actions/activity";
 import { getPendingBillsForUser } from "@/actions/bills";
+import { getMyJemaws } from "@/actions/jemaws";
 import { getPendingSettlementsForUser } from "@/actions/settlements";
-import { getServerSession } from "@/lib/session";
-import { JemawCard } from "./jemaw-card";
-import { CreateJemawDialog } from "./create-jemaw-dialog";
+import { MoneyAmount } from "@/components/money-amount";
+import { PageHeader } from "@/components/page-header";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
+import { getServerSession } from "@/lib/session";
+import { cn } from "@/lib/utils";
+import { dayLabel, initials } from "@/lib/presentation";
+import { CreateJemawDialog } from "./create-jemaw-dialog";
+import { JemawCard } from "./jemaw-card";
+
+type Activity = Awaited<ReturnType<typeof getMyRecentActivity>>[number];
+
+function activityText(activity: Activity) {
+  let metadata: Record<string, string> = {};
+  try { metadata = activity.metadata ? JSON.parse(activity.metadata) as Record<string, string> : {}; } catch {}
+  if (activity.action === "bill.created") return `${activity.user.name} added ${metadata.description || "an expense"}`;
+  if (activity.action === "bill.approved") return `${activity.user.name} approved ${metadata.description || "an expense"}`;
+  if (activity.action === "bill.rejected") return `${activity.user.name} disputed ${metadata.description || "an expense"}`;
+  if (activity.action === "settlement.created") return `${activity.user.name} recorded a payment`;
+  if (activity.action === "settlement.approved") return `${activity.user.name} confirmed a payment`;
+  if (activity.action === "settlement.rejected") return `${activity.user.name} disputed a payment`;
+  return `${activity.user.name} updated the group`;
+}
 
 export default async function DashboardPage() {
-  const [session, jemaws, pendingBills, pendingSettlements] = await Promise.all([
-    getServerSession(),
-    getMyJemaws(),
-    getPendingBillsForUser(),
-    getPendingSettlementsForUser(),
+  const [session, jemaws, pendingBills, pendingSettlements, recentActivity] = await Promise.all([
+    getServerSession(), getMyJemaws(), getPendingBillsForUser(), getPendingSettlementsForUser(), getMyRecentActivity(),
   ]);
-
   const pendingCount = pendingBills.length + pendingSettlements.length;
   const firstName = session?.user.name.split(" ")[0] ?? "there";
   const byCurrency: Record<string, { owed: number; owe: number }> = {};
-
-  for (const jemaw of jemaws) {
-    const balance = Number(jemaw.myBalance);
-    byCurrency[jemaw.currency] ??= { owed: 0, owe: 0 };
-    if (balance > 0) byCurrency[jemaw.currency].owed += balance;
-    if (balance < 0) byCurrency[jemaw.currency].owe += Math.abs(balance);
+  for (const group of jemaws) {
+    const balance = Number(group.myBalance);
+    byCurrency[group.currency] ??= { owed: 0, owe: 0 };
+    if (balance > 0) byCurrency[group.currency].owed += balance;
+    if (balance < 0) byCurrency[group.currency].owe += Math.abs(balance);
   }
-
   const currencies = Object.keys(byCurrency);
-  const primaryCurrency = currencies[0] ?? "USD";
   const singleCurrency = currencies.length <= 1;
-  const owed = singleCurrency ? byCurrency[primaryCurrency]?.owed ?? 0 : 0;
-  const owe = singleCurrency ? byCurrency[primaryCurrency]?.owe ?? 0 : 0;
-  const net = owed - owe;
+  const primaryCurrency = currencies[0] ?? "USD";
+  const net = singleCurrency ? (byCurrency[primaryCurrency]?.owed ?? 0) - (byCurrency[primaryCurrency]?.owe ?? 0) : 0;
+  const lastActivityByGroup = new Map<string, string>();
+  for (const activity of recentActivity) if (!lastActivityByGroup.has(activity.jemawId)) lastActivityByGroup.set(activity.jemawId, activityText(activity));
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <header className="flex items-end justify-between gap-5">
-        <div>
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-primary">Your shared money</p>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-[-0.045em] text-[#20231d] sm:text-4xl">Good to see you, {firstName}.</h1>
-          <p className="mt-2 text-sm text-[#73766e]">Here&apos;s where things stand with your people.</p>
-        </div>
-        <CreateJemawDialog>
-          <Button className="hidden sm:inline-flex"><Plus className="size-4" />New group</Button>
-        </CreateJemawDialog>
-      </header>
+    <div className="mx-auto max-w-6xl">
+      <PageHeader
+        title={`Home, ${firstName}`}
+        description="Your groups, balances, and recent changes."
+        action={<CreateJemawDialog><Button><Plus className="size-4" />New group</Button></CreateJemawDialog>}
+      />
 
-      <section className="paper-grid relative mt-8 overflow-hidden rounded-[30px] bg-[#1d4f3f] p-6 text-[#fffaf0] shadow-[0_22px_60px_rgba(29,79,63,0.18)] sm:p-8 lg:grid lg:grid-cols-[1.35fr_0.65fr] lg:gap-10 lg:p-10">
+      <section className="grid border-b py-7 md:grid-cols-[1fr_auto] md:items-end">
         <div>
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#b8d0c5]">Your position</p>
+          <p className="text-xs text-muted-foreground">Across your groups</p>
           {singleCurrency ? (
-            <>
-              <p className="mt-3 font-money text-5xl font-semibold leading-none tabular-nums sm:text-6xl">
-                {net > 0 ? "+" : net < 0 ? "−" : ""}{formatCurrency(Math.abs(net), primaryCurrency)}
-              </p>
-              <p className="mt-4 max-w-md text-sm leading-relaxed text-[#c8d8d0]">
-                {net > 0 ? "You are ahead overall. Your friends have money coming back to you." : net < 0 ? "You have a little settling up to do across your groups." : "Everything is balanced. That is a rare and beautiful thing."}
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="mt-3 font-money text-5xl font-semibold leading-none sm:text-6xl">{jemaws.length}</p>
-              <p className="mt-4 text-sm text-[#c8d8d0]">active groups across {currencies.length} currencies</p>
-            </>
-          )}
-        </div>
-
-        <div className="mt-8 border-t border-white/15 pt-6 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-1">
-          {singleCurrency ? (
-            <div className="space-y-5">
-              <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-2 text-xs font-semibold text-[#c8d8d0]"><ArrowDownLeft className="size-4 text-[#88d2a9]" />Coming to you</span>
-                <span className="font-money text-lg font-semibold">{owed ? `+${formatCurrency(owed, primaryCurrency)}` : "—"}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-2 text-xs font-semibold text-[#c8d8d0]"><ArrowUpRight className="size-4 text-[#f0a58e]" />Going out</span>
-                <span className="font-money text-lg font-semibold">{owe ? `−${formatCurrency(owe, primaryCurrency)}` : "—"}</span>
-              </div>
+            <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-2">
+              <MoneyAmount amount={net} currency={primaryCurrency} signed className={cn("text-3xl font-semibold sm:text-4xl", net > 0 && "text-[#237a4b]", net < 0 && "text-[#a13629]")} />
+              <span className="text-sm text-muted-foreground">{net > 0 ? "owed to you overall" : net < 0 ? "you owe overall" : "all balances are even"}</span>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
               {currencies.map((currency) => (
-                <div key={currency} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="font-extrabold">{currency}</span>
-                  <span className="text-xs text-[#c8d8d0]">
-                    {byCurrency[currency].owed > 0 && `+${formatCurrency(byCurrency[currency].owed, currency)}`}
-                    {byCurrency[currency].owed > 0 && byCurrency[currency].owe > 0 && " · "}
-                    {byCurrency[currency].owe > 0 && `−${formatCurrency(byCurrency[currency].owe, currency)}`}
-                    {byCurrency[currency].owed === 0 && byCurrency[currency].owe === 0 && "All square"}
-                  </span>
+                <div key={currency}>
+                  <p className="font-mono text-[10px] text-muted-foreground">{currency}</p>
+                  <p className="mt-1 text-sm font-semibold">
+                    <MoneyAmount amount={byCurrency[currency].owed} currency={currency} signed className="text-[#237a4b]" />
+                    <span className="mx-2 text-border">/</span>
+                    <MoneyAmount amount={-byCurrency[currency].owe} currency={currency} signed className="text-[#a13629]" />
+                  </p>
                 </div>
               ))}
             </div>
           )}
-
-          {pendingCount > 0 && (
-            <Link href="/pending" className="mt-7 flex items-center justify-between rounded-2xl bg-[#f3c767] px-4 py-3 text-[#20231d] transition-transform hover:-translate-y-0.5">
-              <span className="flex items-center gap-2 text-xs font-extrabold"><Check className="size-4" />{pendingCount} {pendingCount === 1 ? "request needs" : "requests need"} you</span>
-              <ArrowUpRight className="size-4" />
-            </Link>
-          )}
         </div>
-      </section>
-
-      <section className="mt-12">
-        <div className="flex items-end justify-between gap-4 pb-3">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#90928a]">Your circles</p>
-            <h2 className="mt-1 text-xl font-extrabold tracking-tight">Groups you share</h2>
-          </div>
-          <CreateJemawDialog>
-            <button className="inline-flex items-center gap-1.5 text-xs font-extrabold text-primary hover:underline sm:hidden"><Plus className="size-3.5" />New group</button>
-          </CreateJemawDialog>
-        </div>
-
-        {jemaws.length === 0 ? (
-          <div className="mt-4 border-y border-[#dcd5c8] py-14 text-center sm:py-20">
-            <span className="text-4xl">🌱</span>
-            <h3 className="mt-4 text-xl font-extrabold">Start a shared story</h3>
-            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">Create a group for a trip, a home, or simply the friends you keep splitting dinner with.</p>
-            <CreateJemawDialog><Button className="mt-6"><Plus className="size-4" />Create your first group</Button></CreateJemawDialog>
-          </div>
-        ) : (
-          <div>
-            {jemaws.map((jemaw) => <JemawCard key={jemaw.id} jemaw={jemaw} />)}
-            <div className="border-t border-[#dcd5c8]" />
-          </div>
+        {pendingCount > 0 && (
+          <Link href="/pending" className="mt-6 flex items-center gap-3 border-l-2 border-[#f15b3a] py-1 pl-3 md:mt-0">
+            <Check className="size-4" /><span className="text-sm font-medium">{pendingCount} {pendingCount === 1 ? "request needs" : "requests need"} review</span>
+          </Link>
         )}
       </section>
+
+      <div className="grid gap-12 pt-9 lg:grid-cols-[1.25fr_0.75fr]">
+        <section>
+          <div className="flex items-center justify-between border-b border-foreground pb-3"><h2 className="text-lg font-semibold tracking-[-0.025em]">Groups</h2><span className="font-mono text-[10px] text-muted-foreground">{jemaws.length}</span></div>
+          {jemaws.length === 0 ? (
+            <div className="border-b py-12"><h3 className="text-base font-semibold">No groups yet</h3><p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">Create one for a trip, a home, or any people who keep sharing expenses.</p><CreateJemawDialog><Button className="mt-5"><Plus className="size-4" />Create a group</Button></CreateJemawDialog></div>
+          ) : jemaws.map((jemaw) => <JemawCard key={jemaw.id} jemaw={jemaw} lastActivity={lastActivityByGroup.get(jemaw.id)} />)}
+        </section>
+
+        <section>
+          <div className="flex items-center justify-between border-b border-foreground pb-3"><h2 className="text-lg font-semibold tracking-[-0.025em]">Recent activity</h2><span className="font-mono text-[10px] text-muted-foreground">LATEST</span></div>
+          {recentActivity.length === 0 ? <p className="border-b py-8 text-sm text-muted-foreground">Activity will appear after someone adds an expense or payment.</p> : recentActivity.slice(0, 8).map((activity) => (
+            <Link key={activity.id} href={`/jemaws/${activity.jemawId}`} className="grid grid-cols-[28px_1fr] gap-3 border-b py-4 hover:bg-white">
+              <Avatar className="size-7"><AvatarFallback className="bg-muted text-[8px] font-semibold">{initials(activity.user.name)}</AvatarFallback></Avatar>
+              <div className="min-w-0"><p className="truncate text-xs font-medium">{activityText(activity)}</p><p className="mt-1 flex items-center justify-between gap-3 text-[10px] text-muted-foreground"><span className="truncate">{activity.jemaw.name}</span><span className="font-mono shrink-0">{dayLabel(activity.createdAt)}</span></p></div>
+            </Link>
+          ))}
+        </section>
+      </div>
     </div>
   );
 }
