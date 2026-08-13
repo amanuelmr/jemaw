@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useTransition, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { approveBill, rejectBill } from "@/actions/bills";
 import { approveSettlement, rejectSettlement } from "@/actions/settlements";
 import { removeMember, leaveJemaw } from "@/actions/jemaws";
-import { getJemawActivity } from "@/actions/activity";
 import { getMyJemawLedger } from "@/actions/ledger";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { formatCurrency, cn } from "@/lib/utils";
-import { Check, X, ArrowRight, AlertCircle, Search, Clock, UserMinus, LogOut, Receipt, ArrowLeftRight, BookOpen, Info } from "lucide-react";
+import { dayLabel, getCategoryMeta, initials } from "@/lib/presentation";
+import { Check, X, ArrowRight, AlertCircle, Search, UserMinus, LogOut, Receipt, ArrowLeftRight, BookOpen, Info, BarChart3, Plus } from "lucide-react";
 
 type Member = {
   userId: string;
@@ -71,19 +72,10 @@ type JemawData = {
   id: string;
   currency: string;
   isAdmin: boolean;
+  myBalance: string;
   members: Member[];
   bills: Bill[];
   settlements: Settlement[];
-};
-
-type ActivityLog = {
-  id: string;
-  action: string;
-  targetType: string;
-  targetId: string;
-  metadata: string | null;
-  createdAt: Date;
-  user: { id: string; name: string };
 };
 
 type LedgerEntry = {
@@ -124,21 +116,145 @@ function statusText(status: string) {
   return <span className="text-amber-600 text-xs font-medium">Pending</span>;
 }
 
-function initials(name: string) {
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-}
+function JournalTab({
+  bills,
+  settlements,
+  currentUserId,
+  currency,
+}: {
+  bills: Bill[];
+  settlements: Settlement[];
+  currentUserId: string;
+  currency: string;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
-function actionLabel(action: string, metadata: string | null): string {
-  const meta = metadata ? JSON.parse(metadata) : {};
-  switch (action) {
-    case "bill.created": return `added a bill: "${meta.description ?? ""}" — ${meta.amount ?? ""}`;
-    case "bill.approved": return `approved bill: "${meta.description ?? ""}"`;
-    case "bill.rejected": return `rejected bill: "${meta.description ?? ""}"`;
-    case "settlement.created": return `recorded a payment of ${meta.amount ?? ""} to ${meta.receiverName ?? ""}`;
-    case "settlement.approved": return `confirmed payment of ${meta.amount ?? ""}`;
-    case "settlement.rejected": return `rejected payment of ${meta.amount ?? ""}`;
-    default: return action;
+  const entries = useMemo(
+    () =>
+      [
+        ...bills.map((bill) => ({ kind: "bill" as const, item: bill, createdAt: new Date(bill.createdAt) })),
+        ...settlements.map((settlement) => ({ kind: "settlement" as const, item: settlement, createdAt: new Date(settlement.createdAt) })),
+      ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+    [bills, settlements]
+  );
+
+  function handleBill(action: "approve" | "reject", billId: string) {
+    startTransition(async () => {
+      try {
+        const result = await (action === "approve" ? approveBill : rejectBill)({ billId });
+        toast.success(result.message);
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Action failed");
+      }
+    });
   }
+
+  if (entries.length === 0) {
+    return (
+      <div className="border-y border-[#dcd5c8] py-16 text-center">
+        <span className="text-4xl">🧾</span>
+        <h3 className="mt-4 text-lg font-extrabold">Nothing here yet</h3>
+        <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">Add the first shared expense and this group&apos;s story will start taking shape.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {entries.map((entry, index) => {
+        const label = dayLabel(entry.createdAt);
+        const showDay = index === 0 || dayLabel(entries[index - 1].createdAt) !== label;
+
+        if (entry.kind === "bill") {
+          const bill = entry.item;
+          const category = getCategoryMeta(bill.category);
+          const mySplit = bill.splits.find((split) => split.userId === currentUserId);
+          const isPayer = bill.paidBy.id === currentUserId;
+          const canAct = bill.status === "pending" && !!mySplit && !isPayer;
+
+          return (
+            <div key={`bill-${bill.id}`}>
+              {showDay && (
+                <div className="flex items-center gap-3 pb-2 pt-8 first:pt-0">
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#8d8f87]">{label}</p>
+                  <span className="h-px flex-1 bg-[#dcd5c8]" />
+                </div>
+              )}
+              <article className="group grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 py-4 sm:gap-4 sm:py-5">
+                <span className={cn("grid size-11 place-items-center rounded-[16px] text-xl", category.tint)}>{category.emoji}</span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <h3 className="truncate text-sm font-extrabold text-[#252821] sm:text-[15px]">{bill.description}</h3>
+                    <span className={cn(
+                      "rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider",
+                      bill.status === "approved" ? "bg-[#e1eee6] text-[#19734f]" : bill.status === "rejected" ? "bg-[#f5dfd9] text-[#a64235]" : "bg-[#f6e9bf] text-[#8a6618]"
+                    )}>{bill.status}</span>
+                  </div>
+                  <p className="mt-1 text-xs leading-relaxed text-[#777a72]">
+                    <span className="font-bold text-[#4d514a]">{isPayer ? "You" : bill.paidBy.name}</span> paid · split with {bill.splits.length} {bill.splits.length === 1 ? "person" : "people"}
+                  </p>
+                  {mySplit && (
+                    <p className="mt-1 text-[11px] font-semibold text-[#92938c]">
+                      {isPayer ? "Your expense" : `Your share ${formatCurrency(mySplit.amount, currency)}`}
+                    </p>
+                  )}
+                  {canAct && (
+                    <div className="mt-3 flex gap-2">
+                      <Button size="sm" disabled={isPending} onClick={() => handleBill("approve", bill.id)}><Check className="size-3" />Approve</Button>
+                      <Button size="sm" variant="ghost" className="text-destructive" disabled={isPending} onClick={() => handleBill("reject", bill.id)}>Not right</Button>
+                    </div>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="font-money text-lg font-semibold tabular-nums text-[#20231d] sm:text-xl">{formatCurrency(bill.amount, currency)}</p>
+                  <p className="mt-1 text-[10px] font-semibold text-[#a0a098]">{entry.createdAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
+                </div>
+              </article>
+            </div>
+          );
+        }
+
+        const settlement = entry.item;
+        const payerIsMe = settlement.payer.id === currentUserId;
+        const receiverIsMe = settlement.receiver.id === currentUserId;
+
+        return (
+          <div key={`settlement-${settlement.id}`}>
+            {showDay && (
+              <div className="flex items-center gap-3 pb-2 pt-8 first:pt-0">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#8d8f87]">{label}</p>
+                <span className="h-px flex-1 bg-[#dcd5c8]" />
+              </div>
+            )}
+            <article className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 py-4 sm:gap-4 sm:py-5">
+              <span className="grid size-11 place-items-center rounded-[16px] bg-[#dfeae5] text-xl">💸</span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-extrabold text-[#252821] sm:text-[15px]">
+                    {payerIsMe ? "You" : settlement.payer.name} paid {receiverIsMe ? "you" : settlement.receiver.name}
+                  </h3>
+                  <span className={cn(
+                    "rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider",
+                    settlement.status === "approved" ? "bg-[#e1eee6] text-[#19734f]" : settlement.status === "rejected" ? "bg-[#f5dfd9] text-[#a64235]" : "bg-[#f6e9bf] text-[#8a6618]"
+                  )}>{settlement.status === "approved" ? "confirmed" : settlement.status}</span>
+                </div>
+                <p className="mt-1 truncate text-xs text-[#777a72]">{settlement.description || "Payment recorded for this group"}</p>
+                {settlement.status === "pending" && receiverIsMe && (
+                  <Link href="/pending" className="mt-2 inline-flex text-[11px] font-extrabold text-primary hover:underline">Review payment</Link>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="font-money text-lg font-semibold tabular-nums text-[#19734f] sm:text-xl">{formatCurrency(settlement.amount, currency)}</p>
+                <p className="mt-1 text-[10px] font-semibold text-[#a0a098]">{entry.createdAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
+              </div>
+            </article>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function MembersTab({
@@ -724,57 +840,6 @@ function BalanceTab({ jemawId }: { jemawId: string }) {
   );
 }
 
-function ActivityTab({ jemawId }: { jemawId: string }) {
-  const [logs, setLogs] = useState<ActivityLog[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getJemawActivity(jemawId)
-      .then((data) => setLogs(data as ActivityLog[]))
-      .catch(() => setLogs([]))
-      .finally(() => setLoading(false));
-  }, [jemawId]);
-
-  if (loading) {
-    return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-12 flex items-center justify-center gap-2 text-slate-400 text-sm">
-        <Clock className="w-4 h-4 animate-spin" />
-        Loading activity…
-      </div>
-    );
-  }
-
-  if (!logs || logs.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-14 text-center">
-        <Clock className="w-8 h-8 text-slate-200 mx-auto mb-3" />
-        <p className="text-sm text-slate-400">No activity recorded yet.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      {logs.map((log, i) => (
-        <div key={log.id} className="flex items-start px-5 py-4 border-b border-slate-100 last:border-0 gap-3">
-          {/* Timeline dot + line */}
-          <div className="flex flex-col items-center shrink-0 mt-1">
-            <div className="w-2 h-2 rounded-full bg-indigo-400" />
-            {i < logs.length - 1 && <div className="w-px flex-1 bg-slate-100 mt-1 min-h-[20px]" />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm text-slate-700">
-              <span className="font-medium text-slate-900">{log.user.name}</span>{" "}
-              {actionLabel(log.action, log.metadata)}
-            </p>
-            <p className="text-xs text-slate-400 mt-0.5">{new Date(log.createdAt).toLocaleString()}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function JemawTabs({
   jemaw,
   currentUserId,
@@ -782,49 +847,103 @@ export function JemawTabs({
   jemaw: JemawData;
   currentUserId: string;
 }) {
+  const balance = Number(jemaw.myBalance);
+  const pendingCount = jemaw.bills.filter((bill) => bill.status === "pending").length + jemaw.settlements.filter((settlement) => settlement.status === "pending").length;
+
   return (
-    <Tabs defaultValue="bills">
-      <div className="mb-4 overflow-x-auto pb-1">
-        <TabsList className="bg-slate-100 p-0.5 rounded-xl h-9">
-          <TabsTrigger value="bills" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Bills {jemaw.bills.length > 0 && <span className="ml-1 text-slate-400 font-normal">{jemaw.bills.length}</span>}
+    <Tabs defaultValue="journal" className="mt-1">
+      <div className="overflow-x-auto border-b border-[#dcd5c8]">
+        <TabsList className="h-14 min-w-max gap-6 rounded-none bg-transparent p-0">
+          <TabsTrigger value="journal" className="relative h-14 rounded-none border-0 bg-transparent px-0 text-xs font-bold text-[#7c7e77] shadow-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:scale-x-0 after:bg-primary after:transition-transform data-[state=active]:bg-transparent data-[state=active]:text-[#20231d] data-[state=active]:shadow-none data-[state=active]:after:scale-x-100">
+            Journal
           </TabsTrigger>
-          <TabsTrigger value="settlements" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Settlements {jemaw.settlements.length > 0 && <span className="ml-1 text-slate-400 font-normal">{jemaw.settlements.length}</span>}
+          <TabsTrigger value="bills" className="relative h-14 rounded-none border-0 bg-transparent px-0 text-xs font-bold text-[#7c7e77] shadow-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:scale-x-0 after:bg-primary after:transition-transform data-[state=active]:bg-transparent data-[state=active]:text-[#20231d] data-[state=active]:shadow-none data-[state=active]:after:scale-x-100">
+            Expenses {jemaw.bills.length > 0 && <span className="ml-1 text-[#a2a39c]">{jemaw.bills.length}</span>}
           </TabsTrigger>
-          <TabsTrigger value="balance" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            My balance
+          <TabsTrigger value="settlements" className="relative h-14 rounded-none border-0 bg-transparent px-0 text-xs font-bold text-[#7c7e77] shadow-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:scale-x-0 after:bg-primary after:transition-transform data-[state=active]:bg-transparent data-[state=active]:text-[#20231d] data-[state=active]:shadow-none data-[state=active]:after:scale-x-100">
+            Payments {jemaw.settlements.length > 0 && <span className="ml-1 text-[#a2a39c]">{jemaw.settlements.length}</span>}
           </TabsTrigger>
-          <TabsTrigger value="members" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Members {jemaw.members.length > 0 && <span className="ml-1 text-slate-400 font-normal">{jemaw.members.length}</span>}
+          <TabsTrigger value="balance" className="relative h-14 rounded-none border-0 bg-transparent px-0 text-xs font-bold text-[#7c7e77] shadow-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:scale-x-0 after:bg-primary after:transition-transform data-[state=active]:bg-transparent data-[state=active]:text-[#20231d] data-[state=active]:shadow-none data-[state=active]:after:scale-x-100">
+            How it adds up
           </TabsTrigger>
-          <TabsTrigger value="activity" className="text-xs rounded-lg h-8 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Activity
+          <TabsTrigger value="members" className="relative h-14 rounded-none border-0 bg-transparent px-0 text-xs font-bold text-[#7c7e77] shadow-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:scale-x-0 after:bg-primary after:transition-transform data-[state=active]:bg-transparent data-[state=active]:text-[#20231d] data-[state=active]:shadow-none data-[state=active]:after:scale-x-100">
+            People {jemaw.members.length > 0 && <span className="ml-1 text-[#a2a39c]">{jemaw.members.length}</span>}
           </TabsTrigger>
         </TabsList>
       </div>
 
-      <TabsContent value="bills">
-        <BillsTab bills={jemaw.bills} currentUserId={currentUserId} currency={jemaw.currency} />
-      </TabsContent>
-      <TabsContent value="settlements">
-        <SettlementsTab settlements={jemaw.settlements} currentUserId={currentUserId} currency={jemaw.currency} />
-      </TabsContent>
-      <TabsContent value="balance">
-        <BalanceTab jemawId={jemaw.id} />
-      </TabsContent>
-      <TabsContent value="members">
-        <MembersTab
-          members={jemaw.members}
-          currency={jemaw.currency}
-          currentUserId={currentUserId}
-          isAdmin={jemaw.isAdmin}
-          jemawId={jemaw.id}
-        />
-      </TabsContent>
-      <TabsContent value="activity">
-        <ActivityTab jemawId={jemaw.id} />
-      </TabsContent>
+      <div className="grid gap-10 pt-7 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-14">
+        <div className="min-w-0">
+          <TabsContent value="journal" className="mt-0">
+            <JournalTab bills={jemaw.bills} settlements={jemaw.settlements} currentUserId={currentUserId} currency={jemaw.currency} />
+          </TabsContent>
+          <TabsContent value="bills" className="mt-0">
+            <BillsTab bills={jemaw.bills} currentUserId={currentUserId} currency={jemaw.currency} />
+          </TabsContent>
+          <TabsContent value="settlements" className="mt-0">
+            <SettlementsTab settlements={jemaw.settlements} currentUserId={currentUserId} currency={jemaw.currency} />
+          </TabsContent>
+          <TabsContent value="balance" className="mt-0">
+            <BalanceTab jemawId={jemaw.id} />
+          </TabsContent>
+          <TabsContent value="members" className="mt-0">
+            <MembersTab members={jemaw.members} currency={jemaw.currency} currentUserId={currentUserId} isAdmin={jemaw.isAdmin} jemawId={jemaw.id} />
+          </TabsContent>
+        </div>
+
+        <aside className="space-y-7 lg:sticky lg:top-8 lg:self-start">
+          <section className="rounded-[24px] bg-[#e9e3d7] p-5">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#81837b]">Your balance</p>
+            <p className={cn("mt-3 font-money text-3xl font-semibold tabular-nums", balance > 0 ? "text-[#19734f]" : balance < 0 ? "text-[#b84837]" : "text-[#5f625a]") }>
+              {balance > 0 ? "+" : balance < 0 ? "−" : ""}{formatCurrency(Math.abs(balance), jemaw.currency)}
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-[#71746c]">
+              {balance > 0 ? "Your friends owe you across this group." : balance < 0 ? "This is what you need to pay back." : "You are completely settled here."}
+            </p>
+            {balance < 0 && (
+              <Button asChild className="mt-5 w-full"><Link href={`/jemaws/${jemaw.id}/settlements/new`}>Settle this balance</Link></Button>
+            )}
+          </section>
+
+          <section>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#8d8f87]">People</p>
+              <span className="text-[10px] font-bold text-[#a0a098]">{jemaw.members.length}</span>
+            </div>
+            <div className="mt-3 space-y-2.5">
+              {jemaw.members.slice(0, 5).map((member) => {
+                const memberBalance = Number(member.balance);
+                return (
+                  <div key={member.userId} className="flex items-center gap-2.5">
+                    <Avatar className="size-8">
+                      <AvatarFallback className="bg-[#d9e5de] text-[9px] font-extrabold text-[#315747]">{initials(member.user.name)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-extrabold text-[#343830]">{member.userId === currentUserId ? "You" : member.user.name}</p>
+                      <p className="text-[9px] font-semibold text-[#9a9b94]">{member.isAdmin ? "Host" : "Member"}</p>
+                    </div>
+                    <span className={cn("text-[10px] font-bold tabular-nums", memberBalance > 0 ? "text-[#19734f]" : memberBalance < 0 ? "text-[#b84837]" : "text-[#999a93]") }>
+                      {memberBalance === 0 ? "even" : `${memberBalance > 0 ? "+" : "−"}${formatCurrency(Math.abs(memberBalance), jemaw.currency)}`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="border-t border-[#dcd5c8] pt-5">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#8d8f87]">At a glance</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div><p className="font-money text-xl font-semibold">{jemaw.bills.length}</p><p className="text-[10px] font-semibold text-[#92938c]">expenses</p></div>
+              <div><p className="font-money text-xl font-semibold">{pendingCount}</p><p className="text-[10px] font-semibold text-[#92938c]">pending</p></div>
+            </div>
+            <div className="mt-4 space-y-1">
+              <Link href={`/jemaws/${jemaw.id}/bills/new`} className="flex items-center gap-2 rounded-xl px-2 py-2 text-xs font-bold text-[#555950] hover:bg-black/[0.04]"><Plus className="size-3.5" />Add an expense</Link>
+              <Link href={`/jemaws/${jemaw.id}/stats`} className="flex items-center gap-2 rounded-xl px-2 py-2 text-xs font-bold text-[#555950] hover:bg-black/[0.04]"><BarChart3 className="size-3.5" />View spending</Link>
+            </div>
+          </section>
+        </aside>
+      </div>
     </Tabs>
   );
 }
