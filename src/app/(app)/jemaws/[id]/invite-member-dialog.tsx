@@ -47,10 +47,13 @@ export function InviteMemberDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Invite a member</DialogTitle>
+          <span className="mb-1 text-3xl">👋</span>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">Grow the circle</p>
+          <DialogTitle className="text-2xl">Bring a friend in</DialogTitle>
+          <p className="text-sm leading-relaxed text-muted-foreground">They&apos;ll be able to add expenses, see the journal, and settle their share.</p>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          <div className="space-y-1.5">
+        <form onSubmit={handleSubmit} className="mt-1 space-y-5">
+          <div className="space-y-2">
             <Label htmlFor="invite-email">Email address</Label>
             <Input
               id="invite-email"
@@ -61,15 +64,15 @@ export function InviteMemberDialog({
               required
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            They will receive an invitation email with a link to join the group.
+          <p className="rounded-2xl bg-[#e9e3d7] p-3 text-xs leading-relaxed text-[#676a62]">
+            We&apos;ll send one friendly invitation with a private link. It expires after seven days.
           </p>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Sending…" : "Send invitation"}
+              {isPending ? "Sending…" : "Invite friend"}
             </Button>
           </div>
         </form>
