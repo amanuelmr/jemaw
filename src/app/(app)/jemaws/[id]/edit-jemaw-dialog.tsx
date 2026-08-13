@@ -83,9 +83,8 @@ export function EditJemawDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">Group settings</p>
-          <DialogTitle className="text-2xl">Keep this circle recognisable</DialogTitle>
-          <p className="text-sm leading-relaxed text-muted-foreground">Update the details friends see when they open this group.</p>
+          <DialogTitle>Group settings</DialogTitle>
+          <p className="text-sm leading-relaxed text-muted-foreground">Update the details members see when they open this group.</p>
         </DialogHeader>
         <form onSubmit={handleUpdate} className="mt-1 space-y-5">
           <div className="space-y-1.5">
@@ -98,7 +97,7 @@ export function EditJemawDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="edit-desc">A little context <span className="font-normal text-muted-foreground">optional</span></Label>
+            <Label htmlFor="edit-desc">Description <span className="font-normal text-muted-foreground">optional</span></Label>
             <Textarea
               id="edit-desc"
               value={description}
@@ -122,9 +121,9 @@ export function EditJemawDialog({
 
         <Separator />
 
-        <div className="rounded-2xl bg-[#f5dfd9]/70 p-4">
-          <p className="text-xs font-extrabold text-[#934438]">Done with this group?</p>
-          <p className="mt-1 text-xs leading-relaxed text-[#785d57]">
+        <div className="border-l-2 border-destructive pl-4">
+          <p className="text-sm font-semibold">Archive group</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
             Archive it to hide it from everyone&apos;s active list. The full money history stays safe.
           </p>
           <Button

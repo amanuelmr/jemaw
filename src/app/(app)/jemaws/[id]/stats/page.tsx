@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getJemawById, getJemawStats } from "@/actions/jemaws";
-import { ArrowLeft } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { ArrowLeft, PieChart } from "lucide-react";
+import { MoneyAmount } from "@/components/money-amount";
+import { cn } from "@/lib/utils";
 import { StatsCharts } from "./stats-charts";
-import { getGroupEmoji } from "@/lib/presentation";
 
 export default async function StatsPage({
   params,
@@ -22,46 +22,44 @@ export default async function StatsPage({
   }
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-4xl">
       <Link
         href={`/jemaws/${id}`}
-        className="inline-flex items-center gap-2 text-xs font-bold text-[#777a72] transition-colors hover:text-primary"
+        className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />
         Back to {jemaw.name}
       </Link>
 
-      <div className="mb-9 mt-7 flex items-center gap-4 border-b border-[#dcd5c8] pb-7">
-        <span className="grid size-12 place-items-center rounded-2xl bg-[#e4ded2] text-xl">{getGroupEmoji(jemaw.name)}</span>
-        <div>
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">Spending story</p>
-          <h1 className="mt-1 text-3xl font-extrabold tracking-[-0.045em] text-[#20231d]">How {jemaw.name} spent</h1>
-        </div>
+      <div className="mb-8 mt-6 border-b pb-6">
+        <h1 className="text-3xl font-semibold tracking-[-0.045em]">Spending insights</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{jemaw.name} · {jemaw.currency}</p>
       </div>
 
-      <div className="paper-grid mb-10 grid overflow-hidden rounded-[28px] bg-[#1d4f3f] text-[#fffaf0] sm:grid-cols-[1.2fr_0.8fr]">
-        <div className="p-7 sm:p-9">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#a9c2b6]">Total shared spending</p>
-          <p className="mt-3 font-money text-4xl font-semibold sm:text-5xl">{formatCurrency(stats.totalSpent, jemaw.currency)}</p>
-          <p className="mt-3 text-xs text-[#bfd0c7]">Only approved expenses are included.</p>
+      <div className="mb-10 grid gap-6 border-b pb-8 sm:grid-cols-3">
+        <div>
+          <p className="text-xs text-muted-foreground">Total shared spending</p>
+          <MoneyAmount amount={stats.totalSpent} currency={jemaw.currency} className="mt-2 block text-2xl font-semibold" />
+          <p className="mt-2 text-xs text-muted-foreground">Only approved expenses are included.</p>
         </div>
-        <div className="grid grid-cols-2 border-t border-white/15 sm:border-l sm:border-t-0">
-          <div className="p-6 sm:self-center sm:p-7">
-            <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#9db5aa]">Your share</p>
-            <p className="mt-2 font-money text-xl font-semibold">{formatCurrency(stats.myShare, jemaw.currency)}</p>
-          </div>
-          <div className="border-l border-white/15 p-6 sm:self-center sm:p-7">
-            <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#9db5aa]">Your balance</p>
-            <p className={`mt-2 font-money text-xl font-semibold ${stats.myBalance > 0 ? "text-[#8ad2a8]" : stats.myBalance < 0 ? "text-[#f0a58e]" : "text-[#fffaf0]"}`}>
-              {stats.myBalance === 0 ? "Even" : `${stats.myBalance > 0 ? "+" : "−"}${formatCurrency(Math.abs(stats.myBalance), jemaw.currency)}`}
-            </p>
-          </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Your share</p>
+          <MoneyAmount amount={stats.myShare} currency={jemaw.currency} className="mt-2 block text-2xl font-semibold" />
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Your balance</p>
+          <MoneyAmount
+            amount={stats.myBalance}
+            currency={jemaw.currency}
+            signed
+            className={cn("mt-2 block text-2xl font-semibold", stats.myBalance > 0 && "text-[#237a4b]", stats.myBalance < 0 && "text-[#a13629]")}
+          />
         </div>
       </div>
 
       {stats.totalSpent === 0 ? (
-        <div className="border-y border-[#dcd5c8] py-16 text-center">
-          <span className="text-4xl">📊</span>
+        <div className="border-b py-16 text-center">
+          <PieChart className="mx-auto size-6 text-muted-foreground" />
           <p className="mt-4 text-sm text-muted-foreground">Insights will appear once the first expense is approved.</p>
         </div>
       ) : (

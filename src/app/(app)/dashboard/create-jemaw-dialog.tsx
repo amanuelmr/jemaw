@@ -53,41 +53,41 @@ export function CreateJemawDialog({ children }: { children: React.ReactNode }) {
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">A new circle</p>
-          <DialogTitle className="text-2xl">What are you sharing?</DialogTitle>
-          <p className="text-sm leading-relaxed text-muted-foreground">Trips, homes, dinner crews—give this shared story a place to live.</p>
+          <DialogTitle>Create a group</DialogTitle>
+          <p className="text-sm leading-relaxed text-muted-foreground">Keep expenses, balances, and payments for one group in the same record.</p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="mt-1 space-y-5">
           <div className="space-y-1.5">
             <Label htmlFor="jemaw-name">Group name</Label>
             <Input
               id="jemaw-name"
-              placeholder="Lalibela Trip, Apartment..."
+              placeholder="Lalibela trip"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="jemaw-desc">A little context <span className="font-normal text-muted-foreground">optional</span></Label>
+            <Label htmlFor="jemaw-desc">Description <span className="font-normal text-muted-foreground">optional</span></Label>
             <Textarea
               id="jemaw-desc"
-              placeholder="Four friends, one long weekend, and no spreadsheets."
+              placeholder="A short note about this group"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
             />
           </div>
-          <div className="space-y-1.5 border-t border-[#ded8cb] pt-5">
-            <Label htmlFor="jemaw-currency">What currency will this group use?</Label>
+          <div className="space-y-1.5 border-t pt-5">
+            <Label htmlFor="jemaw-currency">Group currency</Label>
             <CurrencyPicker id="jemaw-currency" value={currency} onValueChange={setCurrency} />
+            <p className="text-xs leading-5 text-muted-foreground">All expenses and payments in this group use this currency.</p>
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isPending || !currency}>
-              {isPending ? "Creating…" : "Start this group"}
+              {isPending ? "Creating…" : "Create group"}
             </Button>
           </div>
         </form>

@@ -91,39 +91,34 @@ export function ProfileForm({ user }: { user: User }) {
   const isLoading = uploading || isPending;
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-[#d8d1c4] bg-[#fffdf7] shadow-[0_20px_60px_rgba(54,52,43,0.08)]">
-      <div className="flex min-h-[520px] flex-col md:flex-row">
-        <div className="paper-grid flex w-full shrink-0 flex-col bg-[#1d4f3f] px-6 py-8 text-[#fffaf0] sm:px-8 md:w-72 md:py-10">
-          <div className="relative self-start">
-            <Avatar className="w-20 h-20">
-              {avatarPreview && <AvatarImage src={avatarPreview} alt={user.name} />}
-              <AvatarFallback className="bg-[#f3c767] text-xl font-extrabold text-[#20231d]">{initials}</AvatarFallback>
-            </Avatar>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="absolute -bottom-1 -right-1 flex size-8 items-center justify-center rounded-full bg-[#f3c767] text-[#20231d] shadow-md transition-transform hover:scale-105"
-            >
-              <Camera className="w-3.5 h-3.5" />
-            </button>
+    <div className="border-t">
+      <section className="grid gap-5 border-b py-7 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-10">
+        <div>
+          <h2 className="text-sm font-semibold">Profile photo</h2>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">Shown beside your expenses, payments, and comments.</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <Avatar className="size-16 border bg-card">
+            {avatarPreview && <AvatarImage src={avatarPreview} alt={user.name} />}
+            <AvatarFallback className="bg-secondary text-base font-semibold text-foreground">{initials}</AvatarFallback>
+          </Avatar>
+          <div>
+            <Button type="button" variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
+              <Camera className="size-3.5" />
+              Choose photo
+            </Button>
+            <p className="mt-2 text-xs text-muted-foreground">JPEG, PNG, or WebP. Maximum 5 MB.</p>
           </div>
-          <p className="mt-5 text-lg font-extrabold">{user.name}</p>
-          <p className="mt-1 truncate text-xs text-[#bad0c5]">{user.email}</p>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="mt-4 cursor-pointer text-left text-xs font-extrabold text-[#f3c767] hover:underline"
-          >
-            Change photo
-          </button>
           <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarChange} className="hidden" />
         </div>
+      </section>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between border-b border-[#e1dacd] px-5 py-5 sm:px-8">
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#85877f]">What friends see</span>
-          </div>
-          <form onSubmit={handleProfileSave} className="space-y-5 border-b border-[#e1dacd] px-5 py-7 sm:px-8">
+      <form onSubmit={handleProfileSave} className="grid gap-5 border-b py-7 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-10">
+        <div>
+          <h2 className="text-sm font-semibold">Public details</h2>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">Your display name is visible to everyone in your groups.</p>
+        </div>
+        <div className="max-w-lg space-y-5">
             <div className="space-y-1.5">
               <Label htmlFor="name">Display name</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -138,21 +133,28 @@ export function ProfileForm({ user }: { user: User }) {
                 {uploading ? "Uploading…" : isPending ? "Saving…" : "Save changes"}
               </Button>
             </div>
-          </form>
+        </div>
+      </form>
 
+      <section className="border-b">
           <button
             type="button"
             onClick={() => setPasswordOpen((v) => !v)}
-            className="flex w-full items-center justify-between border-b border-[#e1dacd] px-5 py-5 text-left transition-colors hover:bg-[#f8f4eb] sm:px-8"
+            className="grid w-full gap-3 py-6 text-left transition-colors hover:text-foreground sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-10"
           >
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#85877f]">Password & security</span>
-            <span className="flex items-center gap-1 text-xs font-extrabold text-primary">
-              {passwordOpen ? "Hide" : "Change password"}
-              {passwordOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            <span className="text-sm font-semibold">Password</span>
+            <span className="flex items-center justify-between text-sm text-muted-foreground">
+              Use a unique password with at least eight characters.
+              <span className="ml-4 flex shrink-0 items-center gap-1 font-medium text-foreground">
+                {passwordOpen ? "Close" : "Change"}
+                {passwordOpen ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+              </span>
             </span>
           </button>
           {passwordOpen && (
-            <form onSubmit={handlePasswordChange} className="space-y-5 px-5 py-7 sm:px-8">
+            <form onSubmit={handlePasswordChange} className="grid gap-5 border-t py-7 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-10">
+              <div />
+              <div className="max-w-lg space-y-5">
               <div className="space-y-1.5">
                 <Label htmlFor="current-pw">Current password</Label>
                 <Input id="current-pw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
@@ -170,10 +172,10 @@ export function ProfileForm({ user }: { user: User }) {
                   {passwordPending ? "Changing…" : "Change password"}
                 </Button>
               </div>
+              </div>
             </form>
           )}
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

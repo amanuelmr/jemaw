@@ -62,7 +62,7 @@ export default async function JemawPage({ params }: { params: Promise<{ id: stri
               <Button variant="outline">Settle up</Button>
             </SettleUpDialog>
             <InviteMemberDialog jemawId={id}>
-              <Button variant="ghost" size="icon" aria-label="Invite a friend" title="Invite a friend"><UserPlus className="size-4" /></Button>
+              <Button variant="ghost" size="icon" aria-label="Invite member" title="Invite member"><UserPlus className="size-4" /></Button>
             </InviteMemberDialog>
             {jemaw.isAdmin && (
               <EditJemawDialog jemawId={id} initialName={jemaw.name} initialDescription={jemaw.description} initialCurrency={jemaw.currency}>

@@ -17,21 +17,6 @@ export function getCategoryMeta(category: string) {
   return CATEGORY_META[category] ?? CATEGORY_META.other;
 }
 
-const GROUP_EMOJI_RULES: Array<[string[], string]> = [
-  [["trip", "travel", "vacation", "road", "tour"], "🚌"],
-  [["home", "house", "apartment", "room", "rent"], "🏠"],
-  [["food", "dinner", "lunch", "restaurant", "crew"], "🍽️"],
-  [["office", "work", "team"], "💼"],
-  [["party", "birthday", "event"], "🎉"],
-  [["family"], "🌿"],
-  [["wedding"], "💍"],
-];
-
-export function getGroupEmoji(name: string) {
-  const normalized = name.toLowerCase();
-  return GROUP_EMOJI_RULES.find(([terms]) => terms.some((term) => normalized.includes(term)))?.[1] ?? "✦";
-}
-
 export function initials(name: string) {
   return name
     .split(" ")

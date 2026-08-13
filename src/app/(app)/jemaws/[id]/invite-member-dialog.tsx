@@ -47,10 +47,8 @@ export function InviteMemberDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <span className="mb-1 text-3xl">👋</span>
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">Grow the circle</p>
-          <DialogTitle className="text-2xl">Bring a friend in</DialogTitle>
-          <p className="text-sm leading-relaxed text-muted-foreground">They&apos;ll be able to add expenses, see the journal, and settle their share.</p>
+          <DialogTitle>Invite someone</DialogTitle>
+          <p className="text-sm leading-relaxed text-muted-foreground">They can add expenses, see the group record, and settle their balance.</p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="mt-1 space-y-5">
           <div className="space-y-2">
@@ -64,15 +62,15 @@ export function InviteMemberDialog({
               required
             />
           </div>
-          <p className="rounded-2xl bg-[#e9e3d7] p-3 text-xs leading-relaxed text-[#676a62]">
-            We&apos;ll send one friendly invitation with a private link. It expires after seven days.
+          <p className="border-l-2 border-accent pl-3 text-xs leading-5 text-muted-foreground">
+            The private invitation link expires after seven days.
           </p>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Sending…" : "Invite friend"}
+              {isPending ? "Sending…" : "Send invitation"}
             </Button>
           </div>
         </form>
