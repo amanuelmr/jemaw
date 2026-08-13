@@ -17,7 +17,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
 import { SUPPORTED_CURRENCIES } from "@/lib/constants";
-import { parseMinorUnits } from "@/lib/money";
+import { formatMinorUnits, parseMinorUnits } from "@/lib/money";
 import { requireActiveJemawMembership } from "@/lib/authorization";
 
 async function assertMemberCanExit(jemawId: string, targetUserId: string) {
@@ -431,7 +431,7 @@ export async function getSuggestedSettlements(jemawId: string) {
   const session = await requireAuth();
   const userId = session.user.id;
 
-  await requireActiveJemawMembership(jemawId, userId);
+  const membership = await requireActiveJemawMembership(jemawId, userId);
 
   const members = await db.query.jemawMembers.findMany({
     where: eq(jemawMembers.jemawId, jemawId),
@@ -441,18 +441,18 @@ export async function getSuggestedSettlements(jemawId: string) {
   const balances = members.map((m) => ({
     userId: m.userId,
     name: m.user.name,
-    balance: parseFloat(m.balance),
+    balance: parseMinorUnits(m.balance, membership.jemaw.currency),
   }));
 
   // Debt simplification: greedy minimum-transaction algorithm
   const creditors = balances
-    .filter((b) => b.balance > 0.01)
+    .filter((b) => b.balance > 0n)
     .map((b) => ({ ...b }))
-    .sort((a, b) => b.balance - a.balance);
+    .sort((a, b) => a.balance === b.balance ? 0 : a.balance > b.balance ? -1 : 1);
   const debtors = balances
-    .filter((b) => b.balance < -0.01)
-    .map((b) => ({ ...b, balance: Math.abs(b.balance) }))
-    .sort((a, b) => b.balance - a.balance);
+    .filter((b) => b.balance < 0n)
+    .map((b) => ({ ...b, balance: -b.balance }))
+    .sort((a, b) => a.balance === b.balance ? 0 : a.balance > b.balance ? -1 : 1);
 
   const suggestions: {
     payerId: string;
@@ -466,20 +466,20 @@ export async function getSuggestedSettlements(jemawId: string) {
   let di = 0;
 
   while (ci < creditors.length && di < debtors.length) {
-    const payment = Math.min(creditors[ci].balance, debtors[di].balance);
-    if (payment > 0.01) {
+    const payment = creditors[ci].balance < debtors[di].balance ? creditors[ci].balance : debtors[di].balance;
+    if (payment > 0n) {
       suggestions.push({
         payerId: debtors[di].userId,
         payerName: debtors[di].name,
         receiverId: creditors[ci].userId,
         receiverName: creditors[ci].name,
-        amount: payment.toFixed(2),
+        amount: formatMinorUnits(payment, membership.jemaw.currency),
       });
     }
     creditors[ci].balance -= payment;
     debtors[di].balance -= payment;
-    if (creditors[ci].balance < 0.01) ci++;
-    if (debtors[di].balance < 0.01) di++;
+    if (creditors[ci].balance === 0n) ci++;
+    if (debtors[di].balance === 0n) di++;
   }
 
   return suggestions;
