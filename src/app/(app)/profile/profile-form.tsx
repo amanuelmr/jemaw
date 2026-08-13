@@ -91,86 +91,82 @@ export function ProfileForm({ user }: { user: User }) {
   const isLoading = uploading || isPending;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="flex min-h-[480px] flex-col md:flex-row">
-        {/* Left identity panel */}
-        <div className="w-full shrink-0 border-b border-slate-200 px-5 py-6 flex flex-col sm:px-8 md:w-64 md:border-b-0 md:border-r md:py-8">
+    <div className="overflow-hidden rounded-[28px] border border-[#d8d1c4] bg-[#fffdf7] shadow-[0_20px_60px_rgba(54,52,43,0.08)]">
+      <div className="flex min-h-[520px] flex-col md:flex-row">
+        <div className="paper-grid flex w-full shrink-0 flex-col bg-[#1d4f3f] px-6 py-8 text-[#fffaf0] sm:px-8 md:w-72 md:py-10">
           <div className="relative self-start">
             <Avatar className="w-20 h-20">
               {avatarPreview && <AvatarImage src={avatarPreview} alt={user.name} />}
-              <AvatarFallback className="text-xl bg-indigo-100 text-indigo-700 font-semibold">{initials}</AvatarFallback>
+              <AvatarFallback className="bg-[#f3c767] text-xl font-extrabold text-[#20231d]">{initials}</AvatarFallback>
             </Avatar>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-indigo-500 text-white flex items-center justify-center hover:bg-indigo-600 transition-colors shadow-sm"
+              className="absolute -bottom-1 -right-1 flex size-8 items-center justify-center rounded-full bg-[#f3c767] text-[#20231d] shadow-md transition-transform hover:scale-105"
             >
               <Camera className="w-3.5 h-3.5" />
             </button>
           </div>
-          <p className="mt-4 text-base font-semibold text-slate-900">{user.name}</p>
-          <p className="text-sm text-slate-400 mt-0.5 truncate">{user.email}</p>
+          <p className="mt-5 text-lg font-extrabold">{user.name}</p>
+          <p className="mt-1 truncate text-xs text-[#bad0c5]">{user.email}</p>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="mt-3 text-xs text-indigo-600 hover:text-indigo-700 hover:underline text-left cursor-pointer"
+            className="mt-4 cursor-pointer text-left text-xs font-extrabold text-[#f3c767] hover:underline"
           >
             Change photo
           </button>
           <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarChange} className="hidden" />
         </div>
 
-        {/* Right settings panel */}
-        <div className="flex-1 min-w-0">
-          {/* Section 1: Personal information */}
-          <div className="flex items-center justify-between px-5 sm:px-8 py-4 border-b border-slate-100">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Personal information</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between border-b border-[#e1dacd] px-5 py-5 sm:px-8">
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#85877f]">What friends see</span>
           </div>
-          <form onSubmit={handleProfileSave} className="px-5 sm:px-8 py-6 space-y-5 border-b border-slate-100">
+          <form onSubmit={handleProfileSave} className="space-y-5 border-b border-[#e1dacd] px-5 py-7 sm:px-8">
             <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-xs font-medium text-slate-700">Display name</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required className="h-9" />
+              <Label htmlFor="name">Display name</Label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700">Email</Label>
-              <Input value={user.email} disabled className="h-9 bg-slate-50 text-slate-400" />
-              <p className="text-xs text-slate-400">Email cannot be changed</p>
+              <Label>Email</Label>
+              <Input value={user.email} disabled />
+              <p className="text-[10px] text-muted-foreground">Your email stays private and cannot be changed here.</p>
             </div>
             <div className="pt-1">
-              <Button type="submit" size="sm" className="h-8 text-xs" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading}>
                 {uploading ? "Uploading…" : isPending ? "Saving…" : "Save changes"}
               </Button>
             </div>
           </form>
 
-          {/* Section 2: Security */}
           <button
             type="button"
             onClick={() => setPasswordOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-5 sm:px-8 py-4 border-b border-slate-100 hover:bg-slate-50/60 transition-colors text-left"
+            className="flex w-full items-center justify-between border-b border-[#e1dacd] px-5 py-5 text-left transition-colors hover:bg-[#f8f4eb] sm:px-8"
           >
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Security</span>
-            <span className="text-xs text-indigo-600 flex items-center gap-1">
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#85877f]">Password & security</span>
+            <span className="flex items-center gap-1 text-xs font-extrabold text-primary">
               {passwordOpen ? "Hide" : "Change password"}
               {passwordOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </span>
           </button>
           {passwordOpen && (
-            <form onSubmit={handlePasswordChange} className="px-5 sm:px-8 py-6 space-y-5">
+            <form onSubmit={handlePasswordChange} className="space-y-5 px-5 py-7 sm:px-8">
               <div className="space-y-1.5">
-                <Label htmlFor="current-pw" className="text-xs font-medium text-slate-700">Current password</Label>
-                <Input id="current-pw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required className="h-9" />
+                <Label htmlFor="current-pw">Current password</Label>
+                <Input id="current-pw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="new-pw" className="text-xs font-medium text-slate-700">New password</Label>
-                <Input id="new-pw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} className="h-9" />
+                <Label htmlFor="new-pw">New password</Label>
+                <Input id="new-pw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="confirm-pw" className="text-xs font-medium text-slate-700">Confirm new password</Label>
-                <Input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="h-9" />
+                <Label htmlFor="confirm-pw">Confirm new password</Label>
+                <Input id="confirm-pw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
               </div>
               <div className="pt-1">
-                <Button type="submit" size="sm" className="h-8 text-xs" disabled={passwordPending}>
+                <Button type="submit" disabled={passwordPending}>
                   {passwordPending ? "Changing…" : "Change password"}
                 </Button>
               </div>
