@@ -29,7 +29,7 @@ export default async function DashboardPage() {
   }
 
   const currencies = Object.keys(byCurrency);
-  const primaryCurrency = currencies[0] ?? "USD";
+  const primaryCurrency = currencies[0] ?? "ETB";
   const singleCurrency = currencies.length <= 1;
   const owed = singleCurrency ? byCurrency[primaryCurrency]?.owed ?? 0 : 0;
   const owe = singleCurrency ? byCurrency[primaryCurrency]?.owe ?? 0 : 0;

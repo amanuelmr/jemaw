@@ -46,8 +46,16 @@ export default async function StatsPage({
           <p className="mt-3 text-xs text-[#bfd0c7]">Only approved expenses are included.</p>
         </div>
         <div className="grid grid-cols-2 border-t border-white/15 sm:border-l sm:border-t-0">
-          <div className="p-6 sm:self-center sm:p-7"><p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#9db5aa]">Your share</p><p className="mt-2 font-money text-xl font-semibold">{formatCurrency(stats.myShare, jemaw.currency)}</p></div>
-          <div className="border-l border-white/15 p-6 sm:self-center sm:p-7"><p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#9db5aa]">Your balance</p><p className={`mt-2 font-money text-xl font-semibold ${stats.myBalance > 0 ? "text-[#8ad2a8]" : stats.myBalance < 0 ? "text-[#f0a58e]" : "text-[#fffaf0]"}`}>{stats.myBalance === 0 ? "Even" : `${stats.myBalance > 0 ? "+" : "−"}${formatCurrency(Math.abs(stats.myBalance), jemaw.currency)}`}</p></div>
+          <div className="p-6 sm:self-center sm:p-7">
+            <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#9db5aa]">Your share</p>
+            <p className="mt-2 font-money text-xl font-semibold">{formatCurrency(stats.myShare, jemaw.currency)}</p>
+          </div>
+          <div className="border-l border-white/15 p-6 sm:self-center sm:p-7">
+            <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#9db5aa]">Your balance</p>
+            <p className={`mt-2 font-money text-xl font-semibold ${stats.myBalance > 0 ? "text-[#8ad2a8]" : stats.myBalance < 0 ? "text-[#f0a58e]" : "text-[#fffaf0]"}`}>
+              {stats.myBalance === 0 ? "Even" : `${stats.myBalance > 0 ? "+" : "−"}${formatCurrency(Math.abs(stats.myBalance), jemaw.currency)}`}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -57,9 +65,12 @@ export default async function StatsPage({
           <p className="mt-4 text-sm text-muted-foreground">Insights will appear once the first expense is approved.</p>
         </div>
       ) : (
-        <div>
-          <StatsCharts byCategory={stats.byCategory} memberBalances={stats.memberBalances} currency={jemaw.currency} />
-        </div>
+        <StatsCharts
+          byCategory={stats.byCategory}
+          memberBalances={stats.memberBalances}
+          totalSpent={stats.totalSpent}
+          currency={jemaw.currency}
+        />
       )}
     </div>
   );

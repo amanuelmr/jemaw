@@ -63,7 +63,7 @@ export default async function JemawPage({ params }: { params: Promise<{ id: stri
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <SettleUpDialog jemawId={id} currency={jemaw.currency}>
+            <SettleUpDialog jemawId={id} currency={jemaw.currency} members={jemaw.members}>
               <Button variant="secondary">Settle up</Button>
             </SettleUpDialog>
             <InviteMemberDialog jemawId={id}>

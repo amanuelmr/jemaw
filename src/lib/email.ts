@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { render } from "@react-email/render";
 import { PendingApprovalEmail } from "@/emails/pending-approval";
 import { JemawInvitationEmail } from "@/emails/jemaw-invitation";
+import { VerificationEmail } from "@/emails/verification-email";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const EMAIL_FROM = process.env.EMAIL_FROM || "Jemaw <noreply@jemaw.app>";
@@ -154,6 +155,34 @@ export async function notifyUsersForBillApproval({
   const failed = results.length - successful;
 
   return { successful, failed, total: results.length };
+}
+
+export async function sendVerificationEmail({
+  name,
+  email,
+  url,
+}: {
+  name: string;
+  email: string;
+  url: string;
+}) {
+  try {
+    const html = await render(VerificationEmail({ name, url }));
+    const transporter = createTransport();
+    await transporter.sendMail({
+      from: EMAIL_FROM,
+      to: email,
+      subject: "Verify your Jemaw account",
+      html,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send verification email:", error);
+    return {
+      success: false,
+      error: "Failed to send verification email",
+    };
+  }
 }
 
 export async function notifyReceiverForSettlementApproval({
