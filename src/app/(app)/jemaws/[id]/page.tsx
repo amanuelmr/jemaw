@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getGroupEmoji, initials } from "@/lib/presentation";
+import { initials } from "@/lib/presentation";
 
 export default async function JemawPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -32,39 +32,34 @@ export default async function JemawPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="mx-auto max-w-6xl">
-      <Link href="/dashboard" className="inline-flex items-center gap-2 text-xs font-bold text-[#777a72] transition-colors hover:text-primary">
+      <Link href="/dashboard" className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">
         <ArrowLeft className="size-3.5" />All groups
       </Link>
 
-      <header className="mt-6 border-b border-[#dcd5c8] pb-7">
+      <header className="mt-5 border-b pb-6">
         <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="grid size-14 shrink-0 place-items-center rounded-[19px] bg-[#e4ded2] text-2xl sm:size-16 sm:text-3xl">
-              {getGroupEmoji(jemaw.name)}
-            </div>
-            <div className="min-w-0">
+          <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="truncate text-3xl font-extrabold tracking-[-0.045em] text-[#20231d] sm:text-4xl">{jemaw.name}</h1>
-                <span className="rounded-full bg-[#e8e2d7] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#686b63]">{jemaw.currency}</span>
+                <h1 className="truncate text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">{jemaw.name}</h1>
+                <span className="font-mono text-[10px] text-muted-foreground">{jemaw.currency}</span>
               </div>
-              {jemaw.description && <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#71746c]">{jemaw.description}</p>}
+              {jemaw.description && <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{jemaw.description}</p>}
               <div className="mt-3 flex items-center gap-3">
                 <div className="flex -space-x-2.5">
                   {jemaw.members.slice(0, 5).map((member) => (
                     <Avatar key={member.userId} className="size-7 border-2 border-background">
                       {member.user.image && <AvatarImage src={member.user.image} alt={member.user.name} />}
-                      <AvatarFallback className="bg-[#d9e5de] text-[8px] font-extrabold text-[#315747]">{initials(member.user.name)}</AvatarFallback>
+                      <AvatarFallback className="bg-muted text-[8px] font-semibold">{initials(member.user.name)}</AvatarFallback>
                     </Avatar>
                   ))}
                 </div>
-                <span className="text-[11px] font-semibold text-[#8a8c85]">{jemaw.members.length} {jemaw.members.length === 1 ? "friend" : "friends"} sharing</span>
+                <span className="text-[11px] text-muted-foreground">{jemaw.members.length} {jemaw.members.length === 1 ? "person" : "people"}</span>
               </div>
-            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <SettleUpDialog jemawId={id} currency={jemaw.currency} members={jemaw.members}>
-              <Button variant="secondary">Settle up</Button>
+              <Button variant="outline">Settle up</Button>
             </SettleUpDialog>
             <InviteMemberDialog jemawId={id}>
               <Button variant="ghost" size="icon" aria-label="Invite a friend" title="Invite a friend"><UserPlus className="size-4" /></Button>
@@ -78,11 +73,11 @@ export default async function JemawPage({ params }: { params: Promise<{ id: stri
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="More group options"><MoreHorizontal className="size-5" /></Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-2xl bg-card p-1.5">
-                <DropdownMenuItem asChild className="rounded-xl">
+              <DropdownMenuContent align="end" className="w-48 rounded-lg bg-white p-1.5">
+                <DropdownMenuItem asChild className="rounded-md">
                   <Link href={`/jemaws/${id}/stats`} className="cursor-pointer gap-2"><BarChart3 className="size-4" />Spending insights</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="rounded-xl">
+                <DropdownMenuItem asChild className="rounded-md">
                   <a href={`/api/jemaws/${id}/export`} download className="cursor-pointer gap-2"><Download className="size-4" />Export history</a>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -95,6 +90,7 @@ export default async function JemawPage({ params }: { params: Promise<{ id: stri
       </header>
 
       <JemawTabs jemaw={jemaw} currentUserId={currentUserId} />
+      <Button asChild className="fixed bottom-20 right-4 z-30 shadow-lg md:hidden"><Link href={`/jemaws/${id}/bills/new`}><Plus className="size-4" />Add expense</Link></Button>
     </div>
   );
 }
