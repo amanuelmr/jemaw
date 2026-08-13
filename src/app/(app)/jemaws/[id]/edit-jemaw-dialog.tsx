@@ -90,9 +90,11 @@ export function EditJemawDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit group</DialogTitle>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">Group settings</p>
+          <DialogTitle className="text-2xl">Keep this circle recognisable</DialogTitle>
+          <p className="text-sm leading-relaxed text-muted-foreground">Update the details friends see when they open this group.</p>
         </DialogHeader>
-        <form onSubmit={handleUpdate} className="space-y-4 mt-2">
+        <form onSubmit={handleUpdate} className="mt-1 space-y-5">
           <div className="space-y-1.5">
             <Label htmlFor="edit-name">Group name</Label>
             <Input
@@ -103,7 +105,7 @@ export function EditJemawDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="edit-desc">Description (optional)</Label>
+            <Label htmlFor="edit-desc">A little context <span className="font-normal text-muted-foreground">optional</span></Label>
             <Textarea
               id="edit-desc"
               value={description}
@@ -126,8 +128,8 @@ export function EditJemawDialog({
               </SelectContent>
             </Select>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isPending}>
@@ -138,15 +140,16 @@ export function EditJemawDialog({
 
         <Separator />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-destructive">Danger zone</p>
-          <p className="text-xs text-muted-foreground">
-            Archiving hides this group while preserving its bills, settlements, and audit history.
+        <div className="rounded-2xl bg-[#f5dfd9]/70 p-4">
+          <p className="text-xs font-extrabold text-[#934438]">Done with this group?</p>
+          <p className="mt-1 text-xs leading-relaxed text-[#785d57]">
+            Archive it to hide it from everyone&apos;s active list. The full money history stays safe.
           </p>
           <Button
             type="button"
             variant="destructive"
             size="sm"
+            className="mt-3"
             disabled={isPending}
             onClick={handleArchive}
           >
@@ -155,7 +158,7 @@ export function EditJemawDialog({
           {confirmArchive && (
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => setConfirmArchive(false)}
             >
