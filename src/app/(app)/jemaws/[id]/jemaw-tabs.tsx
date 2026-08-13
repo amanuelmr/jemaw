@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatCurrency, cn } from "@/lib/utils";
 import { dayLabel, getCategoryMeta, initials } from "@/lib/presentation";
-import { Check, X, ArrowRight, AlertCircle, Search, UserMinus, LogOut, Receipt, ArrowLeftRight, BookOpen, Info, BarChart3, Plus } from "lucide-react";
+import { Check, X, ArrowRight, AlertCircle, Search, UserMinus, LogOut, BookOpen, Info, BarChart3, Plus } from "lucide-react";
 
 type Member = {
   userId: string;
@@ -95,25 +95,10 @@ type LedgerData = {
   hasOlderEntries: boolean;
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
-  breakfast: "bg-amber-400",
-  lunch: "bg-orange-400",
-  dinner: "bg-rose-400",
-  groceries: "bg-emerald-400",
-  transportation: "bg-sky-400",
-  utilities: "bg-violet-400",
-  rent: "bg-indigo-400",
-  entertainment: "bg-pink-400",
-  vacation: "bg-cyan-400",
-  shopping: "bg-fuchsia-400",
-  healthcare: "bg-red-400",
-  other: "bg-slate-300",
-};
-
 function statusText(status: string) {
-  if (status === "approved") return <span className="text-emerald-600 text-xs font-medium">Approved</span>;
-  if (status === "rejected") return <span className="text-rose-600 text-xs font-medium">Rejected</span>;
-  return <span className="text-amber-600 text-xs font-medium">Pending</span>;
+  if (status === "approved") return <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#19734f]">Approved</span>;
+  if (status === "rejected") return <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#b84837]">Rejected</span>;
+  return <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#9a731d]">Pending</span>;
 }
 
 function JournalTab({
@@ -301,27 +286,27 @@ function MembersTab({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="border-y border-[#dcd5c8]">
       {members.map((m) => {
         const bal = parseFloat(m.balance);
         const isMe = m.userId === currentUserId;
         return (
-          <div key={m.userId} className="flex items-center px-5 py-3.5 border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors">
-            <Avatar className="w-8 h-8 mr-3 shrink-0">
-              <AvatarFallback className="text-xs bg-indigo-100 text-indigo-700 font-semibold">{initials(m.user.name)}</AvatarFallback>
+          <div key={m.userId} className="flex items-center border-b border-[#e2dbcf] py-4 last:border-0">
+            <Avatar className="mr-3 size-10 shrink-0">
+              <AvatarFallback className="bg-[#d9e5de] text-[10px] font-extrabold text-[#315747]">{initials(m.user.name)}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-slate-900 truncate">{m.user.name}</span>
-                {m.isAdmin && <span className="text-[10px] text-indigo-600 font-medium">Admin</span>}
-                {isMe && <span className="text-[10px] text-slate-400">(you)</span>}
+                <span className="truncate text-sm font-extrabold text-[#20231d]">{m.user.name}</span>
+                {m.isAdmin && <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary">Host</span>}
+                {isMe && <span className="text-[10px] text-[#92938c]">(you)</span>}
               </div>
-              <p className="text-xs text-slate-400 truncate">{m.user.email}</p>
+              <p className="truncate text-[11px] text-[#8a8c85]">{m.user.email}</p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <span className="text-sm font-semibold">
                 {bal === 0 ? (
-                  <span className="text-slate-400 font-normal text-xs">Settled</span>
+                  <span className="text-xs font-semibold text-[#92938c]">Even</span>
                 ) : bal > 0 ? (
                   <span className="text-emerald-600">+{formatCurrency(bal, currency)}</span>
                 ) : (
@@ -330,7 +315,7 @@ function MembersTab({
               </span>
               {isAdmin && !isMe && (
                 <button
-                  className="text-slate-300 hover:text-rose-500 transition-colors"
+                  className="text-[#aaa9a1] transition-colors hover:text-destructive"
                   disabled={isPending}
                   onClick={() => handleRemove(m.userId)}
                   title="Remove member"
@@ -344,7 +329,7 @@ function MembersTab({
       })}
 
       {!isAdmin && (
-        <div className="px-5 py-3 border-t border-slate-100">
+        <div className="border-t border-[#e2dbcf] py-3">
           <Button
             variant="ghost"
             size="sm"
@@ -448,11 +433,11 @@ function BillsTab({
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="border-y border-[#dcd5c8]">
         {filtered.length === 0 ? (
           <div className="py-14 text-center">
-            <Receipt className="w-8 h-8 text-slate-200 mx-auto mb-3" />
-            <p className="text-sm text-slate-400">
+            <span className="text-3xl">🧾</span>
+            <p className="mt-3 text-sm text-muted-foreground">
               {bills.length === 0 ? "No bills yet. Add one to get started." : "No bills match your filters."}
             </p>
           </div>
@@ -461,52 +446,47 @@ function BillsTab({
             const isInSplit = bill.splits.some((s) => s.userId === currentUserId);
             const isPayer = bill.paidBy.id === currentUserId;
             const canAct = bill.status === "pending" && isInSplit && !isPayer;
-            const dotColor = CATEGORY_COLORS[bill.category] ?? "bg-slate-300";
-
             return (
-              <div key={bill.id} className="border-b border-slate-100 last:border-0">
-                <div className="flex items-center px-5 py-4 hover:bg-slate-50/60 transition-colors">
-                  {/* Category dot */}
-                  <div className={cn("w-2 h-2 rounded-full mr-4 shrink-0", dotColor)} />
+              <div key={bill.id} className="border-b border-[#e2dbcf] last:border-0">
+                <div className="flex items-center py-4">
+                  <div className={cn("mr-4 grid size-10 shrink-0 place-items-center rounded-[14px] text-lg", getCategoryMeta(bill.category).tint)}>{getCategoryMeta(bill.category).emoji}</div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate">{bill.description}</p>
+                    <p className="truncate text-sm font-extrabold text-[#20231d]">{bill.description}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-slate-400 capitalize">{bill.category}</span>
-                      <span className="text-slate-200 text-xs">·</span>
-                      <span className="text-xs text-slate-400">paid by {bill.paidBy.name}</span>
-                      <span className="text-slate-200 text-xs">·</span>
-                      <span className="text-xs text-slate-400">{new Date(bill.createdAt).toLocaleDateString()}</span>
+                      <span className="text-xs text-[#777a72]">{bill.paidBy.name} paid</span>
+                      <span className="text-xs text-[#c1bbae]">·</span>
+                      <span className="text-xs text-[#8d8f87]">{new Date(bill.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
 
                   {/* Right side */}
                   <div className="text-right shrink-0 ml-4">
-                    <p className="text-sm font-semibold text-slate-900">{formatCurrency(bill.amount, currency)}</p>
+                    <p className="font-money text-lg font-semibold text-[#20231d]">{formatCurrency(bill.amount, currency)}</p>
                     {statusText(bill.status)}
                   </div>
                 </div>
 
                 {/* Receipt + actions */}
                 {(bill.receiptUrl || canAct) && (
-                  <div className={cn("px-5 pb-4 space-y-3", !bill.receiptUrl && "pt-0")}>
+                  <div className={cn("space-y-3 pb-4 pl-14", !bill.receiptUrl && "pt-0")}>
                     {bill.receiptUrl && (
                       <a href={bill.receiptUrl} target="_blank" rel="noopener noreferrer" className="inline-block">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={bill.receiptUrl}
                           alt="Receipt"
-                          className="rounded-lg border border-slate-200 max-h-36 object-contain bg-slate-50 hover:opacity-90 transition-opacity cursor-zoom-in"
+                          className="max-h-36 cursor-zoom-in rounded-2xl border border-[#ded8cb] bg-card object-contain transition-opacity hover:opacity-90"
                         />
                       </a>
                     )}
                     {canAct && (
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="h-7 text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50" disabled={isPending} onClick={() => handleBill("approve", bill.id)}>
+                        <Button size="sm" disabled={isPending} onClick={() => handleBill("approve", bill.id)}>
                           <Check className="w-3 h-3 mr-1" /> Approve
                         </Button>
-                        <Button size="sm" variant="outline" className="h-7 text-xs text-rose-600 border-rose-200 hover:bg-rose-50" disabled={isPending} onClick={() => handleBill("reject", bill.id)}>
+                        <Button size="sm" variant="ghost" className="text-destructive" disabled={isPending} onClick={() => handleBill("reject", bill.id)}>
                           <X className="w-3 h-3 mr-1" /> Reject
                         </Button>
                       </div>
@@ -605,11 +585,11 @@ function SettlementsTab({
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="border-y border-[#dcd5c8]">
         {filtered.length === 0 ? (
           <div className="py-14 text-center">
-            <ArrowLeftRight className="w-8 h-8 text-slate-200 mx-auto mb-3" />
-            <p className="text-sm text-slate-400">
+            <span className="text-3xl">💸</span>
+            <p className="mt-3 text-sm text-muted-foreground">
               {settlements.length === 0 ? "No settlements yet." : "No settlements match your filters."}
             </p>
           </div>
@@ -619,36 +599,36 @@ function SettlementsTab({
             const canAct = s.status === "pending" && isReceiver;
 
             return (
-              <div key={s.id} className="border-b border-slate-100 last:border-0">
-                <div className="flex items-center px-5 py-4 hover:bg-slate-50/60 transition-colors">
-                  <div className="w-2 h-2 rounded-full bg-indigo-300 mr-4 shrink-0" />
+              <div key={s.id} className="border-b border-[#e2dbcf] last:border-0">
+                <div className="flex items-center py-4">
+                  <div className="mr-4 grid size-10 shrink-0 place-items-center rounded-[14px] bg-[#dfeae5] text-lg">💸</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 text-sm">
-                      <span className="font-medium text-slate-900">{s.payer.name}</span>
-                      <ArrowRight className="w-3 h-3 text-slate-300 shrink-0" />
-                      <span className="font-medium text-slate-900">{s.receiver.name}</span>
+                      <span className="font-extrabold text-[#20231d]">{s.payer.name}</span>
+                      <ArrowRight className="size-3 shrink-0 text-[#aaa9a1]" />
+                      <span className="font-extrabold text-[#20231d]">{s.receiver.name}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      {s.description && <span className="text-xs text-slate-400 truncate">{s.description}</span>}
-                      {s.description && <span className="text-slate-200 text-xs">·</span>}
-                      <span className="text-xs text-slate-400">{new Date(s.createdAt).toLocaleDateString()}</span>
+                      {s.description && <span className="truncate text-xs text-[#777a72]">{s.description}</span>}
+                      {s.description && <span className="text-xs text-[#c1bbae]">·</span>}
+                      <span className="text-xs text-[#8d8f87]">{new Date(s.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <div className="text-right shrink-0 ml-4">
-                    <p className="text-sm font-semibold text-slate-900">{formatCurrency(s.amount, currency)}</p>
+                    <p className="font-money text-lg font-semibold text-[#19734f]">{formatCurrency(s.amount, currency)}</p>
                     {statusText(s.status)}
                   </div>
                 </div>
 
                 {(s.paymentProofUrl || s.rejectionReason || canAct) && (
-                  <div className="px-5 pb-4 space-y-3">
+                  <div className="space-y-3 pb-4 pl-14">
                     {s.paymentProofUrl && (
                       <a href={s.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="inline-block">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={s.paymentProofUrl}
                           alt="Payment proof"
-                          className="rounded-lg border border-slate-200 max-h-36 object-contain bg-slate-50 hover:opacity-90 transition-opacity cursor-zoom-in"
+                          className="max-h-36 cursor-zoom-in rounded-2xl border border-[#ded8cb] bg-card object-contain transition-opacity hover:opacity-90"
                         />
                       </a>
                     )}
@@ -660,10 +640,10 @@ function SettlementsTab({
                     )}
                     {canAct && (
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="h-7 text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50" disabled={isPending} onClick={() => handleApprove(s.id)}>
+                        <Button size="sm" disabled={isPending} onClick={() => handleApprove(s.id)}>
                           <Check className="w-3 h-3 mr-1" /> Confirm received
                         </Button>
-                        <Button size="sm" variant="outline" className="h-7 text-xs text-rose-600 border-rose-200 hover:bg-rose-50" disabled={isPending} onClick={() => { setRejectTarget(s.id); setRejectReason(""); }}>
+                        <Button size="sm" variant="ghost" className="text-destructive" disabled={isPending} onClick={() => { setRejectTarget(s.id); setRejectReason(""); }}>
                           <X className="w-3 h-3 mr-1" /> Reject
                         </Button>
                       </div>
@@ -733,7 +713,7 @@ function BalanceTab({ jemawId }: { jemawId: string }) {
 
   if (!ledger) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-12 flex items-center justify-center gap-2 text-slate-400 text-sm">
+      <div className="flex items-center justify-center gap-2 border-y border-[#dcd5c8] py-12 text-sm text-muted-foreground">
         <BookOpen className="w-4 h-4 animate-pulse" />
         Explaining your balance…
       </div>
@@ -743,25 +723,25 @@ function BalanceTab({ jemawId }: { jemawId: string }) {
   const balance = parseFloat(ledger.currentBalance);
 
   return (
-    <div className="space-y-3">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+    <div className="space-y-5">
+      <div className="paper-grid rounded-[24px] bg-[#1d4f3f] p-6 text-[#fffaf0]">
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#a9c2b6]">
           Your current balance
         </p>
         <p
           className={cn(
-            "mt-1 text-2xl font-bold tabular-nums",
+            "mt-2 font-money text-4xl font-semibold tabular-nums",
             balance > 0
-              ? "text-emerald-600"
+              ? "text-[#8ad2a8]"
               : balance < 0
-                ? "text-rose-600"
-                : "text-slate-500"
+                ? "text-[#f0a58e]"
+                : "text-[#fffaf0]"
           )}
         >
           {balance > 0 && "+"}
           {formatCurrency(ledger.currentBalance, ledger.currency)}
         </p>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-2 text-sm text-[#bfd0c7]">
           {balance > 0
             ? "Group members owe you this amount."
             : balance < 0
@@ -770,7 +750,7 @@ function BalanceTab({ jemawId }: { jemawId: string }) {
         </p>
       </div>
 
-      <div className="flex gap-2 rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-700">
+      <div className="flex gap-2 rounded-2xl bg-[#e9e3d7] p-4 text-xs leading-relaxed text-[#676a62]">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <p>
           Only approved bills and confirmed payments affect this balance.
@@ -778,11 +758,11 @@ function BalanceTab({ jemawId }: { jemawId: string }) {
         </p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="border-y border-[#dcd5c8]">
         {ledger.entries.length === 0 ? (
           <div className="py-14 text-center">
-            <BookOpen className="w-8 h-8 text-slate-200 mx-auto mb-3" />
-            <p className="text-sm text-slate-400">
+            <BookOpen className="mx-auto mb-3 size-8 text-[#c3bcae]" />
+            <p className="text-sm text-muted-foreground">
               No approved financial entries yet.
             </p>
           </div>
@@ -792,34 +772,34 @@ function BalanceTab({ jemawId }: { jemawId: string }) {
             return (
               <div
                 key={entry.id}
-                className="flex items-start gap-3 border-b border-slate-100 px-5 py-4 last:border-0"
+                className="flex items-start gap-3 border-b border-[#e2dbcf] py-4 last:border-0"
               >
                 <div
                   className={cn(
                     "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
                     isPositive
-                      ? "bg-emerald-50 text-emerald-600"
-                      : "bg-rose-50 text-rose-600"
+                      ? "bg-[#e1eee6] text-[#19734f]"
+                      : "bg-[#f5dfd9] text-[#b84837]"
                   )}
                 >
                   {isPositive ? "+" : "−"}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-sm font-extrabold text-[#20231d]">
                     {ledgerEntryLabel(entry)}
                   </p>
-                  <p className="truncate text-xs text-slate-500">
+                  <p className="truncate text-xs text-[#777a72]">
                     {entry.description ||
                       (entry.sourceType === "bill" ? "Approved bill" : "Confirmed payment")}
                   </p>
-                  <p className="mt-1 text-[11px] text-slate-400">
+                  <p className="mt-1 text-[10px] text-[#96978f]">
                     {new Date(entry.createdAt).toLocaleString()} · Balance after: {formatCurrency(entry.balanceAfter, ledger.currency)}
                   </p>
                 </div>
                 <p
                   className={cn(
-                    "shrink-0 text-sm font-semibold tabular-nums",
-                    isPositive ? "text-emerald-600" : "text-rose-600"
+                    "shrink-0 font-money text-base font-semibold tabular-nums",
+                    isPositive ? "text-[#19734f]" : "text-[#b84837]"
                   )}
                 >
                   {isPositive ? "+" : "−"}
