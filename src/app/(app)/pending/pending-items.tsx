@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { formatCurrency, cn } from "@/lib/utils";
+import { getCategoryMeta } from "@/lib/presentation";
 import { Check, X, Receipt, ArrowLeftRight, ArrowRight, LayoutList } from "lucide-react";
 
 type PendingBill = {
@@ -36,13 +37,6 @@ type PendingSettlement = {
   createdAt: Date;
   payer: { name: string };
   jemaw: { name: string; currency: string };
-};
-
-const CATEGORY_COLORS: Record<string, string> = {
-  breakfast: "bg-amber-400", lunch: "bg-orange-400", dinner: "bg-rose-400",
-  groceries: "bg-emerald-400", transportation: "bg-sky-400", utilities: "bg-violet-400",
-  rent: "bg-indigo-400", entertainment: "bg-pink-400", vacation: "bg-cyan-400",
-  shopping: "bg-fuchsia-400", healthcare: "bg-red-400", other: "bg-slate-300",
 };
 
 type Filter = "all" | "bills" | "settlements";
@@ -122,40 +116,37 @@ export function PendingItems({
 
   if (totalCount === 0) {
     return (
-      <div className="py-24 flex flex-col items-center justify-center text-center">
-        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-          <Check className="w-5 h-5 text-slate-400" />
-        </div>
-        <p className="text-sm font-semibold text-slate-900 mb-1">All caught up!</p>
-        <p className="text-sm text-slate-400">No items pending your approval.</p>
+      <div className="border-y border-[#dcd5c8] py-20 text-center">
+        <span className="text-4xl">✨</span>
+        <p className="mt-4 text-lg font-extrabold text-[#20231d]">All caught up</p>
+        <p className="mt-1 text-sm text-muted-foreground">There is nothing waiting on you.</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="flex flex-col items-start gap-6 md:flex-row md:gap-8">
-        {/* Left sticky sidebar */}
-        <div className="w-full shrink-0 md:sticky md:top-24 md:w-52">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Approvals</p>
-          <div className="grid grid-cols-3 gap-1 md:block md:space-y-0.5">
+      <div>
+        <div className="mb-9 flex items-center justify-between gap-4 border-b border-[#dcd5c8] pb-4">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#8d8f87]">Show me</p>
+          <div className="inline-flex rounded-full bg-[#e7e0d4] p-1">
             {filters.map(({ key, label, icon, count }) => (
               <button
                 key={key}
                 onClick={() => setFilter(key)}
                 className={cn(
-                  "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors",
+                  "flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-extrabold transition-colors",
                   filter === key
-                    ? "bg-slate-100 text-slate-900 font-medium"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    ? "bg-[#fffdf7] text-[#20231d] shadow-sm"
+                    : "text-[#74776f] hover:text-[#20231d]"
                 )}
               >
-                <span className="flex items-center gap-2.5">
+                <span className="flex items-center gap-1.5 [&_svg]:size-3.5">
                   {icon}
                   {label}
                 </span>
                 {count > 0 && (
-                  <span className="text-xs bg-slate-200 text-slate-600 rounded-full px-1.5 py-0.5 font-medium tabular-nums">
+                  <span className="text-[9px] text-[#8c8e87] tabular-nums">
                     {count}
                   </span>
                 )}
@@ -164,46 +155,43 @@ export function PendingItems({
           </div>
         </div>
 
-        {/* Right feed */}
-        <div className="flex-1 min-w-0 space-y-8">
+        <div className="mx-auto max-w-3xl space-y-12">
           {/* Bills section */}
           {showBills && pendingBills.length > 0 && (
             <div>
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Bills</span>
-                <span className="text-xs text-slate-400">{pendingBills.length} pending</span>
-                <div className="flex-1 h-px bg-slate-200" />
+              <div className="mb-3 flex items-center gap-3">
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#797c74]">Expenses to check</span>
+                <span className="text-[10px] font-semibold text-[#9a9b94]">{pendingBills.length}</span>
+                <div className="h-px flex-1 bg-[#dcd5c8]" />
               </div>
               <div>
                 {pendingBills.map((bill) => (
-                  <div key={bill.id} className="flex flex-col border-b border-slate-100 last:border-0">
-                    <div className="flex items-center px-2 py-4 hover:bg-slate-50/60 transition-colors rounded-lg">
-                      <div className={cn("w-2 h-2 rounded-full mr-4 shrink-0", CATEGORY_COLORS[bill.category] ?? "bg-slate-300")} />
+                  <div key={bill.id} className="flex flex-col border-b border-[#ded8cb] last:border-0">
+                    <div className="flex items-center py-5">
+                      <div className={cn("mr-4 grid size-11 shrink-0 place-items-center rounded-[16px] text-xl", getCategoryMeta(bill.category).tint)}>{getCategoryMeta(bill.category).emoji}</div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">{bill.description}</p>
+                        <p className="truncate text-[15px] font-extrabold text-[#20231d]">{bill.description}</p>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          <span className="text-xs text-slate-400 capitalize">{bill.category}</span>
+                          <span className="text-xs font-semibold text-[#777a72]">{bill.paidBy.name} paid</span>
                           <span className="text-slate-200">·</span>
-                          <span className="text-xs text-slate-400">paid by {bill.paidBy.name}</span>
+                          <span className="text-xs text-[#8d8f87]">{bill.jemaw.name}</span>
                           <span className="text-slate-200">·</span>
-                          <span className="text-xs text-slate-400">{bill.jemaw.name}</span>
-                          <span className="text-slate-200">·</span>
-                          <span className="text-xs text-slate-400">{new Date(bill.createdAt).toLocaleDateString()}</span>
+                          <span className="text-xs text-[#8d8f87]">{new Date(bill.createdAt).toLocaleDateString()}</span>
                         </div>
-                        <p className="text-xs text-slate-400 mt-0.5">
+                        <p className="mt-1 text-[10px] text-[#96978f]">
                           Split between: {bill.splits.map((s) => s.user.name).join(", ")}
                         </p>
                       </div>
                       <div className="text-right shrink-0 ml-4">
-                        <p className="text-sm font-semibold text-slate-900">{formatCurrency(bill.amount, bill.jemaw.currency)}</p>
-                        <span className="text-amber-600 text-xs font-medium">Pending</span>
+                        <p className="font-money text-xl font-semibold text-[#20231d]">{formatCurrency(bill.amount, bill.jemaw.currency)}</p>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#9a731d]">Waiting</span>
                       </div>
                     </div>
-                    <div className="pb-4 px-2 flex gap-2">
-                      <Button size="sm" variant="outline" className="h-7 text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50" disabled={isPending} onClick={() => handleBillAction("approve", bill.id)}>
+                    <div className="flex gap-2 pb-5 pl-[60px]">
+                      <Button size="sm" disabled={isPending} onClick={() => handleBillAction("approve", bill.id)}>
                         <Check className="w-3 h-3 mr-1" /> Approve
                       </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-xs text-rose-600 border-rose-200 hover:bg-rose-50" disabled={isPending} onClick={() => handleBillAction("reject", bill.id)}>
+                      <Button size="sm" variant="ghost" className="text-destructive" disabled={isPending} onClick={() => handleBillAction("reject", bill.id)}>
                         <X className="w-3 h-3 mr-1" /> Reject
                       </Button>
                     </div>
@@ -226,21 +214,21 @@ export function PendingItems({
           {/* Settlements section */}
           {showSettlements && pendingSettlements.length > 0 && (
             <div>
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Settlements</span>
-                <span className="text-xs text-slate-400">{pendingSettlements.length} pending</span>
-                <div className="flex-1 h-px bg-slate-200" />
+              <div className="mb-3 flex items-center gap-3">
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#797c74]">Payments to confirm</span>
+                <span className="text-[10px] font-semibold text-[#9a9b94]">{pendingSettlements.length}</span>
+                <div className="h-px flex-1 bg-[#dcd5c8]" />
               </div>
               <div>
                 {pendingSettlements.map((s) => (
-                  <div key={s.id} className="flex flex-col border-b border-slate-100 last:border-0">
-                    <div className="flex items-center px-2 py-4 hover:bg-slate-50/60 transition-colors rounded-lg">
-                      <div className="w-2 h-2 rounded-full bg-indigo-300 mr-4 shrink-0" />
+                  <div key={s.id} className="flex flex-col border-b border-[#ded8cb] last:border-0">
+                    <div className="flex items-center py-5">
+                      <div className="mr-4 grid size-11 shrink-0 place-items-center rounded-[16px] bg-[#dfeae5] text-xl">💸</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 text-sm">
-                          <span className="font-medium text-slate-900">{s.payer.name}</span>
+                          <span className="font-extrabold text-[#20231d]">{s.payer.name}</span>
                           <ArrowRight className="w-3 h-3 text-slate-300 shrink-0" />
-                          <span className="font-medium text-slate-900">you</span>
+                          <span className="font-extrabold text-[#20231d]">you</span>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           {s.description && <><span className="text-xs text-slate-400 truncate">{s.description}</span><span className="text-slate-200">·</span></>}
@@ -250,11 +238,11 @@ export function PendingItems({
                         </div>
                       </div>
                       <div className="text-right shrink-0 ml-4">
-                        <p className="text-sm font-semibold text-slate-900">{formatCurrency(s.amount, s.jemaw.currency)}</p>
-                        <span className="text-amber-600 text-xs font-medium">Pending</span>
+                        <p className="font-money text-xl font-semibold text-[#19734f]">{formatCurrency(s.amount, s.jemaw.currency)}</p>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#9a731d]">Waiting</span>
                       </div>
                     </div>
-                    <div className="pb-4 px-2 space-y-3">
+                    <div className="space-y-3 pb-5 pl-[60px]">
                       {s.paymentProofUrl && (
                         <a href={s.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="inline-block">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -262,10 +250,10 @@ export function PendingItems({
                         </a>
                       )}
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="h-7 text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50" disabled={isPending} onClick={() => handleApproveSettlement(s.id)}>
+                        <Button size="sm" disabled={isPending} onClick={() => handleApproveSettlement(s.id)}>
                           <Check className="w-3 h-3 mr-1" /> Confirm received
                         </Button>
-                        <Button size="sm" variant="outline" className="h-7 text-xs text-rose-600 border-rose-200 hover:bg-rose-50" disabled={isPending} onClick={() => { setRejectTarget({ id: s.id, type: "settlement" }); setRejectReason(""); }}>
+                        <Button size="sm" variant="ghost" className="text-destructive" disabled={isPending} onClick={() => { setRejectTarget({ id: s.id, type: "settlement" }); setRejectReason(""); }}>
                           <X className="w-3 h-3 mr-1" /> Reject
                         </Button>
                       </div>
