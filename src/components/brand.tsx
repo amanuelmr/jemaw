@@ -6,14 +6,11 @@ export function BrandMark({ className }: { className?: string }) {
     <span
       aria-hidden="true"
       className={cn(
-        "grid size-8 shrink-0 grid-cols-2 gap-[3px] rounded-[10px] bg-[#f3c767] p-[7px] shadow-[inset_0_0_0_1px_rgba(32,35,29,0.08)]",
+        "font-mono inline-flex h-7 min-w-7 shrink-0 items-center justify-center border border-current px-1 text-[12px] font-semibold tracking-[-0.08em]",
         className
       )}
     >
-      <span className="rounded-full bg-[#20231d]" />
-      <span className="rounded-full bg-[#185c48]" />
-      <span className="rounded-full bg-[#185c48]" />
-      <span className="rounded-full bg-[#20231d]" />
+      j<span className="text-[#f15b3a]">.</span>
     </span>
   );
 }
@@ -28,16 +25,16 @@ export function Brand({
   compact?: boolean;
 }) {
   return (
-    <Link href={href} className="inline-flex items-center gap-2.5" aria-label="Jemaw home">
-      <BrandMark />
+    <Link href={href} className="inline-flex items-center gap-2" aria-label="Jemaw home">
+      {compact && <BrandMark className={inverse ? "text-white" : "text-[#171916]"} />}
       {!compact && (
         <span
           className={cn(
-            "text-[15px] font-extrabold uppercase tracking-[0.18em]",
-            inverse ? "text-[#fffaf0]" : "text-[#20231d]"
+            "text-[19px] font-semibold tracking-[-0.055em]",
+            inverse ? "text-white" : "text-[#171916]"
           )}
         >
-          Jemaw
+          jemaw<span className="text-[#f15b3a]">.</span>
         </span>
       )}
     </Link>

@@ -1,28 +1,28 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #f5f1e8;
-  --color-foreground: #20231d;
-  --color-card: #fffdf7;
-  --color-card-foreground: #20231d;
-  --color-popover: #fffdf7;
-  --color-popover-foreground: #20231d;
-  --color-primary: #185c48;
-  --color-primary-foreground: #fffdf7;
-  --color-secondary: #e9e3d7;
-  --color-secondary-foreground: #20231d;
-  --color-muted: #ece7dd;
-  --color-muted-foreground: #6f7169;
-  --color-accent: #e6eee9;
-  --color-accent-foreground: #174c3d;
-  --color-destructive: #b84837;
-  --color-destructive-foreground: #fffaf4;
-  --color-border: #ded8cb;
-  --color-input: #d8d1c3;
-  --color-ring: #185c48;
-  --radius: 1rem;
-  --font-sans: var(--font-manrope);
-  --font-serif: var(--font-fraunces);
+  --color-background: #f4f4ef;
+  --color-foreground: #171916;
+  --color-card: #ffffff;
+  --color-card-foreground: #171916;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #171916;
+  --color-primary: #171916;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #e9eae5;
+  --color-secondary-foreground: #171916;
+  --color-muted: #e9eae5;
+  --color-muted-foreground: #656960;
+  --color-accent: #f15b3a;
+  --color-accent-foreground: #ffffff;
+  --color-destructive: #b33a2b;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #d7d9d3;
+  --color-input: #bfc2ba;
+  --color-ring: #171916;
+  --radius: 0.5rem;
+  --font-sans: var(--font-plex-sans);
+  --font-mono: var(--font-plex-mono);
 }
 
 html {
@@ -32,7 +32,7 @@ html {
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
-  letter-spacing: -0.012em;
+  letter-spacing: -0.006em;
 }
 
 *,
@@ -42,8 +42,8 @@ body {
 }
 
 ::selection {
-  background: #f2c66d;
-  color: #20231d;
+  background: #f15b3a;
+  color: #ffffff;
 }
 
 button,
@@ -55,16 +55,13 @@ textarea,
 }
 
 .font-money {
-  font-family: var(--font-fraunces), Georgia, serif;
-  font-variation-settings: "SOFT" 70, "WONK" 0;
-  letter-spacing: -0.045em;
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 
 .paper-grid {
-  background-image:
-    linear-gradient(rgba(32, 35, 29, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(32, 35, 29, 0.035) 1px, transparent 1px);
-  background-size: 24px 24px;
+  background-image: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {

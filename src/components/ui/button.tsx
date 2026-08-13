@@ -5,25 +5,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-bold transition-[background-color,color,transform,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:translate-y-px [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-[0_7px_18px_rgba(24,92,72,0.18)] hover:bg-[#124b3b]",
+          "bg-primary text-primary-foreground hover:bg-[#30332e]",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-[#9e3d2f]",
+          "bg-destructive text-destructive-foreground hover:bg-[#922f23]",
         outline:
-          "border border-input bg-transparent hover:border-foreground/30 hover:bg-card",
+          "border border-input bg-white hover:border-foreground hover:bg-white",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[#ddd5c6]",
+          "bg-secondary text-secondary-foreground hover:bg-[#dfe1da]",
         ghost: "hover:bg-foreground/[0.06] hover:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-10 px-5 py-2",
-        sm: "h-8 px-3.5 text-xs",
-        lg: "h-12 px-7 text-[15px]",
+        default: "h-10 px-4 py-2",
+        sm: "h-8 px-3 text-xs",
+        lg: "h-12 px-6 text-[15px]",
         icon: "h-10 w-10",
       },
     },
