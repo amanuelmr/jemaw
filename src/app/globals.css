@@ -1,37 +1,85 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: hsl(210 20% 98%);
-  --color-foreground: hsl(222 47% 11%);
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(222 47% 11%);
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(222 47% 11%);
-  --color-primary: hsl(239 84% 67%);
-  --color-primary-foreground: hsl(0 0% 100%);
-  --color-secondary: hsl(210 17% 95%);
-  --color-secondary-foreground: hsl(222 47% 11%);
-  --color-muted: hsl(210 17% 95%);
-  --color-muted-foreground: hsl(215 16% 47%);
-  --color-accent: hsl(210 17% 95%);
-  --color-accent-foreground: hsl(222 47% 11%);
-  --color-destructive: hsl(0 84% 60%);
-  --color-destructive-foreground: hsl(0 0% 98%);
-  --color-border: hsl(214 13% 91%);
-  --color-input: hsl(214 13% 91%);
-  --color-ring: hsl(239 84% 67%);
-  --radius: 0.75rem;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: #f5f1e8;
+  --color-foreground: #20231d;
+  --color-card: #fffdf7;
+  --color-card-foreground: #20231d;
+  --color-popover: #fffdf7;
+  --color-popover-foreground: #20231d;
+  --color-primary: #185c48;
+  --color-primary-foreground: #fffdf7;
+  --color-secondary: #e9e3d7;
+  --color-secondary-foreground: #20231d;
+  --color-muted: #ece7dd;
+  --color-muted-foreground: #6f7169;
+  --color-accent: #e6eee9;
+  --color-accent-foreground: #174c3d;
+  --color-destructive: #b84837;
+  --color-destructive-foreground: #fffaf4;
+  --color-border: #ded8cb;
+  --color-input: #d8d1c3;
+  --color-ring: #185c48;
+  --radius: 1rem;
+  --font-sans: var(--font-manrope);
+  --font-serif: var(--font-fraunces);
+}
+
+html {
+  background: var(--color-background);
 }
 
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
+  letter-spacing: -0.012em;
 }
 
 *,
 *::before,
 *::after {
   border-color: var(--color-border);
+}
+
+::selection {
+  background: #f2c66d;
+  color: #20231d;
+}
+
+button,
+a,
+input,
+textarea,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.font-money {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-variation-settings: "SOFT" 70, "WONK" 0;
+  letter-spacing: -0.045em;
+}
+
+.paper-grid {
+  background-image:
+    linear-gradient(rgba(32, 35, 29, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(32, 35, 29, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .page-enter {
+    animation: page-enter 360ms ease-out both;
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
