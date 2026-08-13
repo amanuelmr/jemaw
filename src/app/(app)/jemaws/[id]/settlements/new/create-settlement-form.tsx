@@ -6,17 +6,12 @@ import { toast } from "sonner";
 import { createSettlement } from "@/actions/settlements";
 import { uploadPaymentProof } from "@/lib/cloudinary";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Upload, X, ImageIcon } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import { initials } from "@/lib/presentation";
+import { Check, Upload, X, ImageIcon } from "lucide-react";
 
 type Member = {
   userId: string;
@@ -123,38 +118,39 @@ export function CreateSettlementForm({
   const isLoading = uploading || isPending;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="space-y-1.5">
-        <Label htmlFor="receiver">Who did you pay?</Label>
-        <Select value={receiverId} onValueChange={setReceiverId} required>
-          <SelectTrigger id="receiver">
-            <SelectValue placeholder="Select a member" />
-          </SelectTrigger>
-          <SelectContent>
-            {members.map((m) => (
-              <SelectItem key={m.userId} value={m.userId}>
-                {m.user.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <form onSubmit={handleSubmit}>
+      <div>
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">Payment details</p>
+        <h2 className="mt-2 text-2xl font-extrabold tracking-tight">Who did you pay?</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Choose the friend who received your payment.</p>
+        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+          {members.map((member) => (
+            <button key={member.userId} type="button" onClick={() => setReceiverId(member.userId)} className={cn("flex items-center gap-3 rounded-2xl border p-3 text-left transition-all", receiverId === member.userId ? "border-primary bg-[#e4eee8] shadow-[inset_0_0_0_1px_#185c48]" : "border-[#dcd5c8] bg-card/50 hover:bg-card") }>
+              <Avatar className="size-10"><AvatarFallback className="bg-[#d9e5de] text-[10px] font-extrabold text-[#315747]">{initials(member.user.name)}</AvatarFallback></Avatar>
+              <span className="min-w-0 flex-1 truncate text-sm font-extrabold">{member.user.name}</span>
+              <span className={cn("grid size-5 place-items-center rounded-full border", receiverId === member.userId ? "border-primary bg-primary text-white" : "border-[#bdb6a9]")}>{receiverId === member.userId && <Check className="size-3" />}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="amount">Amount ({currency})</Label>
-        <Input
+      <div className="mt-8 flex items-end gap-3 border-b-2 border-[#aaa397] pb-3 focus-within:border-primary">
+        <span className="pb-1 text-sm font-extrabold text-[#777a72]">{currency}</span>
+        <input
           id="amount"
           type="number"
+          inputMode="decimal"
           step="0.01"
           min="0.01"
           placeholder="0.00"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
+          className="font-money min-w-0 flex-1 bg-transparent text-5xl font-semibold outline-none placeholder:text-[#c9c2b5]"
           required
         />
       </div>
 
-      <div className="space-y-1.5">
+      <div className="mt-7 space-y-2">
         <Label htmlFor="description">Note (optional)</Label>
         <Textarea
           id="description"
@@ -165,28 +161,26 @@ export function CreateSettlementForm({
         />
       </div>
 
-      {/* Payment proof upload — required */}
-      <div className="space-y-2">
+      <div className="mt-7 space-y-2">
         <Label>
-          Payment proof screenshot <span className="text-destructive">*</span>
+          Show that it was paid <span className="text-destructive">*</span>
         </Label>
         <p className="text-xs text-muted-foreground">
-          Upload a screenshot of your bank transfer, mobile payment, or receipt.
-          The receiver must see this before confirming payment.
+          Add a bank, mobile money, or receipt screenshot so the receiver can confirm it.
         </p>
 
         {proofPreview ? (
-          <div className="relative rounded-lg overflow-hidden border">
+          <div className="relative mt-3 overflow-hidden rounded-2xl border bg-card">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={proofPreview}
               alt="Payment proof preview"
-              className="w-full max-h-64 object-contain bg-muted"
+              className="max-h-72 w-full object-contain"
             />
             <button
               type="button"
               onClick={removeProof}
-              className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black/80"
+              className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-[#20231d]/75 text-white hover:bg-[#20231d]"
             >
               <X className="w-4 h-4" />
             </button>
@@ -195,11 +189,10 @@ export function CreateSettlementForm({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed rounded-lg p-8 flex flex-col items-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+            className="mt-3 flex w-full items-center gap-4 rounded-2xl border border-dashed border-[#bdb6a9] p-5 text-left text-muted-foreground transition-colors hover:border-primary hover:text-primary"
           >
-            <ImageIcon className="w-8 h-8" />
-            <span className="text-sm font-medium">Click to upload screenshot</span>
-            <span className="text-xs">PNG, JPG, WEBP up to 10MB</span>
+            <span className="grid size-12 place-items-center rounded-2xl bg-[#e8e2d7]"><ImageIcon className="size-5" /></span>
+            <span><span className="block text-sm font-extrabold">Upload payment proof</span><span className="mt-1 block text-[10px]">PNG, JPG or WebP up to 10MB</span></span>
           </button>
         )}
 
@@ -212,23 +205,22 @@ export function CreateSettlementForm({
         />
       </div>
 
-      <div className="flex gap-2 pt-2">
+      <div className="mt-8 flex items-center justify-between gap-3">
         <Button
           type="button"
-          variant="outline"
-          className="flex-1"
+          variant="ghost"
           onClick={() => router.push(`/jemaws/${jemawId}`)}
           disabled={isLoading}
         >
           Cancel
         </Button>
-        <Button type="submit" className="flex-1" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading}>
           {uploading ? (
             <><Upload className="w-4 h-4 mr-2 animate-bounce" /> Uploading…</>
           ) : isPending ? (
             "Recording…"
           ) : (
-            "Record payment"
+            "Send for confirmation"
           )}
         </Button>
       </div>
