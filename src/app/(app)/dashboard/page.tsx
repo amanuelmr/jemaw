@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowDownLeft, ArrowUpRight, Check, Plus } from "lucide-react";
 import { getMyJemaws } from "@/actions/jemaws";
 import { getPendingBillsForUser } from "@/actions/bills";
 import { getPendingSettlementsForUser } from "@/actions/settlements";
@@ -6,7 +7,6 @@ import { getServerSession } from "@/lib/session";
 import { JemawCard } from "./jemaw-card";
 import { CreateJemawDialog } from "./create-jemaw-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Clock, Users, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 export default async function DashboardPage() {
@@ -19,163 +19,117 @@ export default async function DashboardPage() {
 
   const pendingCount = pendingBills.length + pendingSettlements.length;
   const firstName = session?.user.name.split(" ")[0] ?? "there";
-
-  // Group balances by currency so mixed-currency groups don't collapse into USD
   const byCurrency: Record<string, { owed: number; owe: number }> = {};
-  for (const j of jemaws) {
-    const bal = parseFloat(j.myBalance);
-    if (!byCurrency[j.currency]) byCurrency[j.currency] = { owed: 0, owe: 0 };
-    if (bal > 0) byCurrency[j.currency].owed += bal;
-    else if (bal < 0) byCurrency[j.currency].owe += Math.abs(bal);
+
+  for (const jemaw of jemaws) {
+    const balance = Number(jemaw.myBalance);
+    byCurrency[jemaw.currency] ??= { owed: 0, owe: 0 };
+    if (balance > 0) byCurrency[jemaw.currency].owed += balance;
+    if (balance < 0) byCurrency[jemaw.currency].owe += Math.abs(balance);
   }
+
   const currencies = Object.keys(byCurrency);
   const primaryCurrency = currencies[0] ?? "USD";
-  const isSingleCurrency = currencies.length <= 1;
-  const totalOwedToMe = isSingleCurrency ? (byCurrency[primaryCurrency]?.owed ?? 0) : 0;
-  const totalIOwe = isSingleCurrency ? (byCurrency[primaryCurrency]?.owe ?? 0) : 0;
-  const netBalance = totalOwedToMe - totalIOwe;
+  const singleCurrency = currencies.length <= 1;
+  const owed = singleCurrency ? byCurrency[primaryCurrency]?.owed ?? 0 : 0;
+  const owe = singleCurrency ? byCurrency[primaryCurrency]?.owe ?? 0 : 0;
+  const net = owed - owe;
 
   return (
-    <div>
-      {/* Hero balance section */}
-      <div className="mb-10">
-        <p className="text-sm text-slate-500 mb-1">Hi, {firstName}</p>
+    <div className="mx-auto max-w-5xl">
+      <header className="flex items-end justify-between gap-5">
+        <div>
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-primary">Your shared money</p>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-[-0.045em] text-[#20231d] sm:text-4xl">Good to see you, {firstName}.</h1>
+          <p className="mt-2 text-sm text-[#73766e]">Here&apos;s where things stand with your people.</p>
+        </div>
+        <CreateJemawDialog>
+          <Button className="hidden sm:inline-flex"><Plus className="size-4" />New group</Button>
+        </CreateJemawDialog>
+      </header>
 
-        {isSingleCurrency ? (
-          <div className="flex items-baseline gap-3 mb-4">
-            <p className={`text-4xl sm:text-5xl font-bold tracking-tight ${netBalance >= 0 ? "text-slate-900" : "text-rose-600"}`}>
-              {netBalance >= 0
-                ? netBalance === 0 ? formatCurrency(0, primaryCurrency) : `+${formatCurrency(netBalance, primaryCurrency)}`
-                : `−${formatCurrency(Math.abs(netBalance), primaryCurrency)}`}
-            </p>
-            <p className="text-sm text-slate-400 pb-1">net balance</p>
-          </div>
-        ) : (
-          <div className="flex items-baseline gap-3 mb-4">
-            <p className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900">{jemaws.length}</p>
-            <p className="text-sm text-slate-400 pb-1">active groups · multiple currencies</p>
-          </div>
-        )}
-
-        <div className="flex items-center gap-6 flex-wrap">
-          {isSingleCurrency ? (
+      <section className="paper-grid relative mt-8 overflow-hidden rounded-[30px] bg-[#1d4f3f] p-6 text-[#fffaf0] shadow-[0_22px_60px_rgba(29,79,63,0.18)] sm:p-8 lg:grid lg:grid-cols-[1.35fr_0.65fr] lg:gap-10 lg:p-10">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#b8d0c5]">Your position</p>
+          {singleCurrency ? (
             <>
-              <div className="flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <ArrowUpRight className="w-3 h-3 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Owed to you</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {totalOwedToMe === 0 ? "—" : `+${formatCurrency(totalOwedToMe, primaryCurrency)}`}
-                  </p>
-                </div>
-              </div>
-              <div className="w-px h-8 bg-slate-200" />
-              <div className="flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-full bg-rose-100 flex items-center justify-center">
-                  <ArrowDownRight className="w-3 h-3 text-rose-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">You owe</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {totalIOwe === 0 ? "—" : formatCurrency(totalIOwe, primaryCurrency)}
-                  </p>
-                </div>
-              </div>
-              <div className="w-px h-8 bg-slate-200" />
+              <p className="mt-3 font-money text-5xl font-semibold leading-none tabular-nums sm:text-6xl">
+                {net > 0 ? "+" : net < 0 ? "−" : ""}{formatCurrency(Math.abs(net), primaryCurrency)}
+              </p>
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-[#c8d8d0]">
+                {net > 0 ? "You are ahead overall. Your friends have money coming back to you." : net < 0 ? "You have a little settling up to do across your groups." : "Everything is balanced. That is a rare and beautiful thing."}
+              </p>
             </>
           ) : (
-            // Multi-currency: show per-currency owed/owe summary
             <>
-              {currencies.map((cur, i) => (
-                <div key={cur} className="flex items-center gap-1.5">
-                  <div>
-                    <p className="text-xs text-slate-500">{cur}</p>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {byCurrency[cur].owed > 0 && <span className="text-emerald-600">+{formatCurrency(byCurrency[cur].owed, cur)}</span>}
-                      {byCurrency[cur].owed > 0 && byCurrency[cur].owe > 0 && <span className="text-slate-300 mx-1">/</span>}
-                      {byCurrency[cur].owe > 0 && <span className="text-rose-500">−{formatCurrency(byCurrency[cur].owe, cur)}</span>}
-                      {byCurrency[cur].owed === 0 && byCurrency[cur].owe === 0 && <span className="text-slate-400">—</span>}
-                    </p>
-                  </div>
-                  {i < currencies.length - 1 && <div className="w-px h-8 bg-slate-200 ml-3" />}
-                </div>
-              ))}
-              <div className="w-px h-8 bg-slate-200" />
-            </>
-          )}
-
-          <div className="flex items-center gap-1.5">
-            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
-              <Users className="w-3 h-3 text-slate-500" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500">Groups</p>
-              <p className="text-sm font-semibold text-slate-900">{jemaws.length}</p>
-            </div>
-          </div>
-
-          {pendingCount > 0 && (
-            <>
-              <div className="w-px h-8 bg-slate-200" />
-              <Link href="/pending" className="flex items-center gap-1.5 group">
-                <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
-                  <Clock className="w-3 h-3 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Pending</p>
-                  <p className="text-sm font-semibold text-amber-600 group-hover:underline">{pendingCount} item{pendingCount !== 1 ? "s" : ""}</p>
-                </div>
-              </Link>
+              <p className="mt-3 font-money text-5xl font-semibold leading-none sm:text-6xl">{jemaws.length}</p>
+              <p className="mt-4 text-sm text-[#c8d8d0]">active groups across {currencies.length} currencies</p>
             </>
           )}
         </div>
-      </div>
 
-      {/* Groups list */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-slate-900 text-sm">Groups</h2>
-            {jemaws.length > 0 && (
-              <span className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full font-medium">
-                {jemaws.length}
-              </span>
-            )}
+        <div className="mt-8 border-t border-white/15 pt-6 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-1">
+          {singleCurrency ? (
+            <div className="space-y-5">
+              <div className="flex items-center justify-between gap-4">
+                <span className="flex items-center gap-2 text-xs font-semibold text-[#c8d8d0]"><ArrowDownLeft className="size-4 text-[#88d2a9]" />Coming to you</span>
+                <span className="font-money text-lg font-semibold">{owed ? `+${formatCurrency(owed, primaryCurrency)}` : "—"}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="flex items-center gap-2 text-xs font-semibold text-[#c8d8d0]"><ArrowUpRight className="size-4 text-[#f0a58e]" />Going out</span>
+                <span className="font-money text-lg font-semibold">{owe ? `−${formatCurrency(owe, primaryCurrency)}` : "—"}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {currencies.map((currency) => (
+                <div key={currency} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-extrabold">{currency}</span>
+                  <span className="text-xs text-[#c8d8d0]">
+                    {byCurrency[currency].owed > 0 && `+${formatCurrency(byCurrency[currency].owed, currency)}`}
+                    {byCurrency[currency].owed > 0 && byCurrency[currency].owe > 0 && " · "}
+                    {byCurrency[currency].owe > 0 && `−${formatCurrency(byCurrency[currency].owe, currency)}`}
+                    {byCurrency[currency].owed === 0 && byCurrency[currency].owe === 0 && "All square"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {pendingCount > 0 && (
+            <Link href="/pending" className="mt-7 flex items-center justify-between rounded-2xl bg-[#f3c767] px-4 py-3 text-[#20231d] transition-transform hover:-translate-y-0.5">
+              <span className="flex items-center gap-2 text-xs font-extrabold"><Check className="size-4" />{pendingCount} {pendingCount === 1 ? "request needs" : "requests need"} you</span>
+              <ArrowUpRight className="size-4" />
+            </Link>
+          )}
+        </div>
+      </section>
+
+      <section className="mt-12">
+        <div className="flex items-end justify-between gap-4 pb-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#90928a]">Your circles</p>
+            <h2 className="mt-1 text-xl font-extrabold tracking-tight">Groups you share</h2>
           </div>
           <CreateJemawDialog>
-            <Button size="sm" className="h-7 text-xs gap-1 px-3">
-              <Plus className="w-3 h-3" />
-              New Group
-            </Button>
+            <button className="inline-flex items-center gap-1.5 text-xs font-extrabold text-primary hover:underline sm:hidden"><Plus className="size-3.5" />New group</button>
           </CreateJemawDialog>
         </div>
 
         {jemaws.length === 0 ? (
-          <div className="py-16 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-              <Users className="w-5 h-5 text-slate-400" />
-            </div>
-            <p className="text-sm font-semibold text-slate-900 mb-1">No groups yet</p>
-            <p className="text-sm text-slate-400 mb-5">
-              Create a group to start splitting expenses
-            </p>
-            <CreateJemawDialog>
-              <Button size="sm" className="h-8 text-xs gap-1 px-4">
-                <Plus className="w-3 h-3" />
-                Create your first group
-              </Button>
-            </CreateJemawDialog>
+          <div className="mt-4 border-y border-[#dcd5c8] py-14 text-center sm:py-20">
+            <span className="text-4xl">🌱</span>
+            <h3 className="mt-4 text-xl font-extrabold">Start a shared story</h3>
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">Create a group for a trip, a home, or simply the friends you keep splitting dinner with.</p>
+            <CreateJemawDialog><Button className="mt-6"><Plus className="size-4" />Create your first group</Button></CreateJemawDialog>
           </div>
         ) : (
           <div>
-            {jemaws.map((jemaw) => (
-              <JemawCard key={jemaw.id} jemaw={jemaw} />
-            ))}
+            {jemaws.map((jemaw) => <JemawCard key={jemaw.id} jemaw={jemaw} />)}
+            <div className="border-t border-[#dcd5c8]" />
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

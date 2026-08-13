@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCurrency } from "@/lib/utils";
+import { getGroupEmoji, initials } from "@/lib/presentation";
 
 type JemawWithBalance = {
   id: string;
@@ -8,62 +11,57 @@ type JemawWithBalance = {
   currency: string;
   myBalance: string;
   isAdmin: boolean;
-  members: { id?: string; userId: string }[];
+  members: {
+    id?: string;
+    userId: string;
+    user?: { name: string; image?: string | null };
+  }[];
 };
 
-const GROUP_COLORS = [
-  "bg-violet-100 text-violet-700",
-  "bg-indigo-100 text-indigo-700",
-  "bg-sky-100 text-sky-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-amber-100 text-amber-700",
-  "bg-rose-100 text-rose-700",
-  "bg-cyan-100 text-cyan-700",
-  "bg-orange-100 text-orange-700",
-];
-
-function getGroupColor(name: string) {
-  let hash = 0;
-  for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) % GROUP_COLORS.length;
-  return GROUP_COLORS[hash];
-}
-
 export function JemawCard({ jemaw }: { jemaw: JemawWithBalance }) {
-  const balance = parseFloat(jemaw.myBalance);
-  const colorClass = getGroupColor(jemaw.name);
-  const initial = jemaw.name.charAt(0).toUpperCase();
-
+  const balance = Number(jemaw.myBalance);
   return (
-    <Link href={`/jemaws/${jemaw.id}`}>
-      <div className="flex items-center px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0 cursor-pointer">
-        {/* Group avatar */}
-        <div className={`w-10 h-10 rounded-xl ${colorClass} flex items-center justify-center font-bold text-sm mr-4 shrink-0 select-none`}>
-          {initial}
-        </div>
+    <Link
+      href={`/jemaws/${jemaw.id}`}
+      className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 border-t border-[#dcd5c8] py-5 transition-colors hover:border-[#9faf9f] sm:gap-5 sm:py-6"
+    >
+      <div className="grid size-12 place-items-center rounded-[17px] bg-[#e4ded2] text-xl transition-transform group-hover:-rotate-3 group-hover:scale-105 sm:size-14">
+        {getGroupEmoji(jemaw.name)}
+      </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-medium text-slate-900 text-sm truncate">{jemaw.name}</p>
-            {jemaw.isAdmin && (
-              <span className="text-[10px] text-indigo-600 font-medium shrink-0">Admin</span>
-            )}
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <h3 className="truncate text-[15px] font-extrabold text-[#20231d] sm:text-base">{jemaw.name}</h3>
+          {jemaw.isAdmin && <span className="rounded-full bg-[#e5ede8] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-primary">Host</span>}
+        </div>
+        <p className="mt-0.5 truncate text-xs text-[#73766e]">
+          {jemaw.description || `${jemaw.members.length} ${jemaw.members.length === 1 ? "person" : "people"} sharing in ${jemaw.currency}`}
+        </p>
+        <div className="mt-2 flex items-center">
+          <div className="flex -space-x-2">
+            {jemaw.members.slice(0, 4).map((member) => (
+              <Avatar key={member.userId} className="size-6 border-2 border-[#f5f1e8]">
+                {member.user?.image && <AvatarImage src={member.user.image} alt={member.user.name} />}
+                <AvatarFallback className="bg-[#d9e5de] text-[8px] font-extrabold text-[#315747]">{initials(member.user?.name || "Member")}</AvatarFallback>
+              </Avatar>
+            ))}
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {jemaw.members.length} member{jemaw.members.length !== 1 ? "s" : ""} · {jemaw.currency}
+          <span className="ml-2 text-[10px] font-semibold text-[#92938c]">{jemaw.members.length} members</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 text-right">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#96968e]">
+            {balance > 0 ? "You get back" : balance < 0 ? "You owe" : "All square"}
+          </p>
+          <p className={`mt-1 font-money text-lg font-semibold tabular-nums sm:text-xl ${balance > 0 ? "text-[#19734f]" : balance < 0 ? "text-[#bd4b3d]" : "text-[#6f7169]"}`}>
+            {balance > 0 ? "+" : balance < 0 ? "−" : ""}{formatCurrency(Math.abs(balance), jemaw.currency)}
           </p>
         </div>
-
-        {/* Balance */}
-        <div className="text-right shrink-0 ml-4">
-          {balance === 0 ? (
-            <p className="text-xs text-slate-400">Settled</p>
-          ) : balance > 0 ? (
-            <p className="text-sm font-semibold text-emerald-600">+{formatCurrency(balance, jemaw.currency)}</p>
-          ) : (
-            <p className="text-sm font-semibold text-rose-500">−{formatCurrency(Math.abs(balance), jemaw.currency)}</p>
-          )}
-        </div>
+        <span className="hidden size-9 place-items-center rounded-full bg-[#e7e1d5] text-[#4b5049] transition-all group-hover:bg-primary group-hover:text-white sm:grid">
+          <ArrowUpRight className="size-4" />
+        </span>
       </div>
     </Link>
   );
