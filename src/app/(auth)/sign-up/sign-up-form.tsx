@@ -6,7 +6,7 @@ import { signUp } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SplitSquareVertical } from "lucide-react";
+import { Brand } from "@/components/brand";
 
 export function SignUpForm() {
   const [name, setName] = useState("");
@@ -51,48 +51,43 @@ export function SignUpForm() {
   }
 
   return (
-    <div className="w-full max-w-sm">
-      {/* Brand */}
-      <div className="flex items-center gap-2 mb-8">
-        <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
-          <SplitSquareVertical className="w-4 h-4 text-white" />
-        </div>
-        <span className="font-bold text-slate-900 text-lg">Jemaw</span>
-      </div>
+    <div className="w-full max-w-md">
+      <div className="mb-10 lg:hidden"><Brand href="/sign-in" /></div>
 
-      <h1 className="text-xl font-bold text-slate-900 mb-1">Create account</h1>
-      <p className="text-sm text-slate-500 mb-6">Start splitting expenses with friends</p>
+      <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary">Come join the circle</p>
+      <h1 className="mt-2 text-3xl font-extrabold tracking-[-0.045em] text-[#20231d]">Make shared money easy.</h1>
+      <p className="mb-8 mt-2 text-sm leading-relaxed text-muted-foreground">Create your account, then start a group for the people and plans that matter.</p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
-          <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 px-3 py-2.5 rounded-lg">
+          <p className="rounded-xl bg-[#f5dfd9] px-3 py-2.5 text-sm font-semibold text-[#a64235]">
             {error}
           </p>
         )}
         <div className="space-y-1.5">
-          <Label htmlFor="name" className="text-slate-700 text-xs font-medium">Full name</Label>
-          <Input id="name" type="text" placeholder="Alex Johnson" value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" className="h-9" />
+          <Label htmlFor="name">Full name</Label>
+          <Input id="name" type="text" placeholder="Amanuel Tesfaye" value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-slate-700 text-xs font-medium">Email</Label>
-          <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" className="h-9" />
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="password" className="text-slate-700 text-xs font-medium">Password</Label>
-          <Input id="password" type="password" placeholder="Min. 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" className="h-9" />
+          <Label htmlFor="password">Password</Label>
+          <Input id="password" type="password" placeholder="Min. 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="confirm-password" className="text-slate-700 text-xs font-medium">Confirm password</Label>
-          <Input id="confirm-password" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required autoComplete="new-password" className="h-9" />
+          <Label htmlFor="confirm-password">Confirm password</Label>
+          <Input id="confirm-password" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required autoComplete="new-password" />
         </div>
-        <Button type="submit" className="w-full h-9" disabled={loading}>
+        <Button type="submit" size="lg" className="mt-2 w-full" disabled={loading}>
           {loading ? "Creating account…" : "Create account"}
         </Button>
       </form>
 
-      <p className="text-sm text-slate-500 text-center mt-6">
+      <p className="mt-7 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/sign-in" className="text-indigo-600 font-medium hover:underline">
+        <Link href="/sign-in" className="font-extrabold text-primary hover:underline">
           Sign in
         </Link>
       </p>

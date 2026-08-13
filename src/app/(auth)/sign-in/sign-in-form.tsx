@@ -6,7 +6,7 @@ import { signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SplitSquareVertical } from "lucide-react";
+import { Brand } from "@/components/brand";
 
 export function SignInForm() {
   const [email, setEmail] = useState("");
@@ -37,26 +37,21 @@ export function SignInForm() {
   }
 
   return (
-    <div className="w-full max-w-sm">
-      {/* Brand */}
-      <div className="flex items-center gap-2 mb-8">
-        <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
-          <SplitSquareVertical className="w-4 h-4 text-white" />
-        </div>
-        <span className="font-bold text-slate-900 text-lg">Jemaw</span>
-      </div>
+    <div className="w-full max-w-md">
+      <div className="mb-10 lg:hidden"><Brand href="/sign-in" /></div>
 
-      <h1 className="text-xl font-bold text-slate-900 mb-1">Sign in</h1>
-      <p className="text-sm text-slate-500 mb-6">Enter your credentials to continue</p>
+      <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary">Welcome back</p>
+      <h1 className="mt-2 text-3xl font-extrabold tracking-[-0.045em] text-[#20231d]">Your groups missed you.</h1>
+      <p className="mb-8 mt-2 text-sm leading-relaxed text-muted-foreground">Sign in to see what&apos;s been shared and what needs your attention.</p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
-          <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 px-3 py-2.5 rounded-lg">
+          <p className="rounded-xl bg-[#f5dfd9] px-3 py-2.5 text-sm font-semibold text-[#a64235]">
             {error}
           </p>
         )}
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-slate-700 text-xs font-medium">Email</Label>
+          <Label htmlFor="email">Email</Label>
           <Input
             id="email"
             type="email"
@@ -65,11 +60,10 @@ export function SignInForm() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="h-9"
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="password" className="text-slate-700 text-xs font-medium">Password</Label>
+          <Label htmlFor="password">Password</Label>
           <Input
             id="password"
             type="password"
@@ -78,18 +72,17 @@ export function SignInForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="h-9"
           />
         </div>
-        <Button type="submit" className="w-full h-9" disabled={loading}>
+        <Button type="submit" size="lg" className="mt-2 w-full" disabled={loading}>
           {loading ? "Signing in…" : "Sign in"}
         </Button>
       </form>
 
-      <p className="text-sm text-slate-500 text-center mt-6">
+      <p className="mt-7 text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
-        <Link href="/sign-up" className="text-indigo-600 font-medium hover:underline">
-          Sign up
+        <Link href="/sign-up" className="font-extrabold text-primary hover:underline">
+          Start a Jemaw
         </Link>
       </p>
     </div>
