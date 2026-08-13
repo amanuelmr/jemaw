@@ -1,43 +1,45 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "@/lib/session";
 import { Brand } from "@/components/brand";
+import { getServerSession } from "@/lib/session";
 
-export default async function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+const events = [
+  { time: "18:42", title: "Mina added Dinner at Prado", detail: "€124.80 · split between 4", state: "Waiting for review", active: true },
+  { time: "18:47", title: "Leo approved the expense", detail: "Balances updated", state: "Approved", active: false },
+  { time: "09:12", title: "Leo paid you €22.00", detail: "Bank transfer", state: "Needs confirmation", active: true },
+];
+
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession();
-
-  if (session) {
-    redirect("/dashboard");
-  }
+  if (session) redirect("/dashboard");
 
   return (
-    <div className="min-h-screen bg-[#f5f1e8] lg:grid lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="paper-grid relative hidden min-h-screen overflow-hidden bg-[#1d4f3f] p-10 text-[#fffaf0] lg:flex lg:flex-col xl:p-14">
-        <Brand href="/sign-in" inverse />
-        <div className="my-auto max-w-xl py-14">
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#a9c2b6]">Money is better shared clearly</p>
-          <h1 className="mt-5 font-money text-6xl font-semibold leading-[0.98] tracking-[-0.055em] xl:text-7xl">Keep the memories.<br />We&apos;ll keep the math.</h1>
-          <p className="mt-6 max-w-md text-sm leading-7 text-[#c5d6ce]">Jemaw is a shared money journal for trips, homes, dinners, and all the small things friends do together.</p>
+    <div className="min-h-screen bg-background lg:grid lg:grid-cols-[minmax(420px,0.88fr)_minmax(520px,1.12fr)]">
+      <main className="flex min-h-screen flex-col border-r bg-white px-5 py-6 sm:px-10 lg:px-12 xl:px-16">
+        <Brand href="/" />
+        <div className="my-auto flex justify-center py-14">{children}</div>
+        <p className="text-xs text-muted-foreground">Expenses, approvals, and payments in one shared record.</p>
+      </main>
 
-          <div className="mt-12 max-w-lg rounded-[26px] bg-[#fffaf0] p-5 text-[#20231d] shadow-[0_25px_70px_rgba(4,20,13,0.22)]">
-            <div className="flex items-center justify-between border-b border-[#ded8cb] pb-4">
-              <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-[14px] bg-[#e7e0d4] text-xl">🚌</span><div><p className="text-sm font-extrabold">Lalibela Trip</p><p className="text-[10px] text-[#8a8c84]">4 friends · ETB</p></div></div>
-              <div className="text-right"><p className="font-money text-lg font-semibold text-[#19734f]">+ ETB 1,250</p><p className="text-[9px] font-bold text-[#8a8c84]">you are owed</p></div>
-            </div>
-            <p className="mt-4 text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#9a9b94]">Today</p>
-            <div className="mt-3 flex items-center gap-3"><span className="grid size-10 place-items-center rounded-[14px] bg-rose-100 text-lg">🍽️</span><div className="min-w-0 flex-1"><p className="text-xs font-extrabold">Dinner at Ben Abeba</p><p className="mt-0.5 text-[10px] text-[#7d8078]">Amanuel paid · You owe ETB 600</p></div><p className="font-money text-sm font-semibold">ETB 2,400</p></div>
-            <div className="mt-3 flex items-center gap-3"><span className="grid size-10 place-items-center rounded-[14px] bg-[#dfeae5] text-lg">💸</span><div className="min-w-0 flex-1"><p className="text-xs font-extrabold">Nahom paid you</p><p className="mt-0.5 text-[10px] text-[#7d8078]">Waiting for your confirmation</p></div><p className="font-money text-sm font-semibold text-[#19734f]">ETB 500</p></div>
+      <aside className="hidden min-h-screen flex-col justify-between px-12 py-10 lg:flex xl:px-20 xl:py-14">
+        <p className="font-mono text-xs text-muted-foreground">A GROUP LEDGER, NOT A GROUP CHAT THREAD</p>
+        <div className="my-16 max-w-2xl">
+          <div className="flex items-start justify-between gap-6 border-b border-foreground pb-5">
+            <div><h2 className="text-2xl font-semibold tracking-[-0.04em]">Lisbon weekend</h2><p className="mt-1 text-xs text-muted-foreground">Mina, Leo, Sofia, and you · EUR</p></div>
+            <div className="text-right"><p className="font-mono text-xl font-semibold text-[#237a4b]">+€38.20</p><p className="mt-1 text-xs text-muted-foreground">owed to you</p></div>
+          </div>
+          <div className="border-b">
+            {events.map((event) => (
+              <div key={`${event.time}-${event.title}`} className="grid grid-cols-[48px_10px_1fr_auto] gap-4 border-b py-6 last:border-0">
+                <span className="font-mono text-[10px] text-muted-foreground">{event.time}</span>
+                <span className={`mt-1.5 size-2 rounded-full ${event.active ? "bg-[#f15b3a]" : "bg-[#8b8f86]"}`} />
+                <div><p className="text-sm font-medium">{event.title}</p><p className="mt-1 text-xs text-muted-foreground">{event.detail}</p></div>
+                <span className="text-xs text-muted-foreground">{event.state}</span>
+              </div>
+            ))}
           </div>
         </div>
-        <p className="text-[10px] font-semibold text-[#87a095]">Built for friends, not accountants.</p>
-      </section>
-
-      <main className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8 lg:px-12">
-        {children}
-      </main>
+        <p className="max-w-lg text-3xl font-medium leading-tight tracking-[-0.045em]">Everyone sees the same numbers. Everyone knows what happens next.</p>
+      </aside>
     </div>
   );
 }

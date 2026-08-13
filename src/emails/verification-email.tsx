@@ -20,10 +20,10 @@ export function VerificationEmail({ name, url }: VerificationEmailProps) {
   return (
     <Html>
       <Head />
-      <Preview>Verify your Jemaw account to get started</Preview>
+      <Preview>Confirm your email address for Jemaw</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={logo}>Jemaw</Heading>
+          <Heading style={logo}>jemaw<span style={{ color: "#f15b3a" }}>.</span></Heading>
           <Hr style={hr} />
 
           <Heading as="h2" style={h2}>Verify your email address</Heading>
@@ -31,13 +31,12 @@ export function VerificationEmail({ name, url }: VerificationEmailProps) {
           <Text style={text}>Hi {name},</Text>
 
           <Text style={text}>
-            Thanks for signing up for Jemaw! Click the button below to verify your
-            email address and activate your account.
+            Confirm this email address to finish creating your account.
           </Text>
 
           <Section style={buttonContainer}>
             <Button style={button} href={url}>
-              Verify email →
+              Confirm email
             </Button>
           </Section>
 
@@ -49,7 +48,7 @@ export function VerificationEmail({ name, url }: VerificationEmailProps) {
           <Hr style={hr} />
 
           <Text style={footer}>
-            © 2025 Jemaw · Expense sharing for groups
+            Jemaw · Shared expenses, kept clear.
           </Text>
         </Container>
       </Body>
@@ -58,7 +57,7 @@ export function VerificationEmail({ name, url }: VerificationEmailProps) {
 }
 
 const main = {
-  backgroundColor: "#f6f9fc",
+  backgroundColor: "#f4f4ef",
   fontFamily:
     '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
 };
@@ -66,46 +65,46 @@ const main = {
 const container = {
   backgroundColor: "#ffffff",
   margin: "0 auto",
-  padding: "40px 20px",
+  padding: "40px 28px",
   maxWidth: "560px",
-  borderRadius: "8px",
+  borderTop: "3px solid #f15b3a",
 };
 
 const logo = {
   color: "#1a1a1a",
   fontSize: "28px",
   fontWeight: "700",
-  textAlign: "center" as const,
+  textAlign: "left" as const,
   margin: "0 0 20px",
 };
 
 const h2 = {
-  color: "#333",
+  color: "#171916",
   fontSize: "20px",
   fontWeight: "600",
   margin: "30px 0 16px",
 };
 
 const hr = {
-  borderColor: "#e6ebf1",
+  borderColor: "#d7d9d3",
   margin: "20px 0",
 };
 
 const text = {
-  color: "#525f7f",
+  color: "#52574f",
   fontSize: "16px",
   lineHeight: "24px",
   margin: "16px 0",
 };
 
 const buttonContainer = {
-  textAlign: "center" as const,
+  textAlign: "left" as const,
   margin: "32px 0",
 };
 
 const button = {
-  backgroundColor: "#6366f1",
-  borderRadius: "10px",
+  backgroundColor: "#171916",
+  borderRadius: "6px",
   color: "#fff",
   fontSize: "15px",
   fontWeight: "600",
@@ -116,16 +115,16 @@ const button = {
 };
 
 const note = {
-  color: "#8898aa",
+  color: "#72776e",
   fontSize: "13px",
   lineHeight: "20px",
   margin: "16px 0",
 };
 
 const footer = {
-  color: "#8898aa",
+  color: "#72776e",
   fontSize: "12px",
-  textAlign: "center" as const,
+  textAlign: "left" as const,
   margin: "0",
 };
 
