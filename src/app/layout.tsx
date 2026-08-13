@@ -16,8 +16,8 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Jemaw",
-  description: "Split bills and track expenses with friends",
+  title: "Jemaw — shared expenses, kept clear",
+  description: "Track group expenses, review splits, and settle payments in one shared record.",
 };
 
 export default function RootLayout({

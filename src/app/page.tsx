@@ -1,251 +1,216 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ArrowRight, Check, LockKeyhole, ReceiptText } from "lucide-react";
+import { Brand } from "@/components/brand";
 import { getServerSession } from "@/lib/session";
-import { SplitSquareVertical, Receipt, Users, CheckCircle, ArrowRight } from "lucide-react";
+
+const people = [
+  { name: "Mina", initials: "MI", color: "bg-[#d8e6dc]" },
+  { name: "Leo", initials: "LE", color: "bg-[#f6d8cf]" },
+  { name: "Sofia", initials: "SO", color: "bg-[#dce1ef]" },
+  { name: "You", initials: "YO", color: "bg-[#eee2bd]" },
+];
+
+const situations = [
+  {
+    index: "01",
+    title: "The weekend away",
+    body: "One person books the apartment. Someone else gets dinner. Nobody keeps a second notes app open.",
+    group: "Lisbon weekend",
+    currency: "EUR",
+    activity: "Mina added Train to Sintra",
+    amount: "€68.40",
+  },
+  {
+    index: "02",
+    title: "The shared home",
+    body: "Rent, internet, groceries, and the things no one remembers buying until the receipt appears.",
+    group: "House on 8th",
+    currency: "USD",
+    activity: "Leo added September internet",
+    amount: "$72.00",
+  },
+  {
+    index: "03",
+    title: "The group that keeps meeting",
+    body: "A running place for dinners, tickets, taxis, and the next plan already forming in the chat.",
+    group: "Sunday supper",
+    currency: "GBP",
+    activity: "Sofia confirmed your payment",
+    amount: "£24.50",
+  },
+];
+
+function Person({ person }: { person: (typeof people)[number] }) {
+  return (
+    <span title={person.name} className={`grid size-8 place-items-center rounded-full border-2 border-white text-[9px] font-semibold ${person.color}`}>
+      {person.initials}
+    </span>
+  );
+}
 
 export default async function RootPage() {
   const session = await getServerSession();
   if (session) redirect("/dashboard");
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Nav — transparent, sits over hero */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-16">
-        <div className="max-w-7xl mx-auto h-full px-8 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center">
-              <SplitSquareVertical className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="font-bold text-white text-base drop-shadow-sm">Jemaw</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/sign-in"
-              className="text-sm text-white/80 hover:text-white transition-colors font-medium"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/sign-up"
-              className="text-sm bg-white text-slate-900 hover:bg-slate-100 px-4 py-1.5 rounded-lg font-semibold transition-colors shadow-sm"
-            >
-              Get started
-            </Link>
-          </div>
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b bg-background/95">
+        <div className="mx-auto flex h-16 max-w-[1320px] items-center px-5 sm:px-8">
+          <Brand href="/" />
+          <nav className="ml-auto flex items-center gap-2" aria-label="Account">
+            <Link href="/sign-in" className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">Sign in</Link>
+            <Link href="/sign-up" className="rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-white hover:bg-[#30332e]">Create an account</Link>
+          </nav>
         </div>
       </header>
 
-      {/* Hero — full-bleed editorial layout */}
-      <section className="relative min-h-screen overflow-hidden">
-        {/* Full-bleed background photo */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1800&q=85"
-          alt="Friends sharing a meal"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-
-        {/* Dark overlay — left heavy, fades right */}
-        <div className="absolute inset-0 bg-slate-950/60" />
-
-        {/* Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-8 h-screen flex flex-col justify-center">
-          <div className="max-w-xl">
-            <span className="inline-flex items-center gap-2 text-xs font-semibold text-white/60 uppercase tracking-widest mb-6">
-              <span className="w-5 h-px bg-white/40" />
-              Expense sharing
-            </span>
-
-            <h1 className="text-6xl lg:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-7">
-              Every shared<br />
-              expense,<br />
-              <span className="text-indigo-300">settled.</span>
-            </h1>
-
-            <p className="text-lg text-white/65 leading-relaxed mb-10 max-w-md">
-              Track bills, approve expenses, and settle up with your group — all in one place. No more WhatsApp math.
-            </p>
-
-            <div className="flex items-center gap-3">
-              <Link
-                href="/sign-up"
-                className="inline-flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold text-sm transition-colors shadow-lg"
-              >
-                Get started free
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
-                href="/sign-in"
-                className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/20 text-white px-6 py-3 rounded-xl font-medium text-sm transition-colors backdrop-blur-sm"
-              >
-                Sign in
-              </Link>
+      <main>
+        <section className="border-b">
+          <div className="mx-auto grid max-w-[1320px] lg:grid-cols-[0.88fr_1.12fr]">
+            <div className="flex min-h-[620px] flex-col justify-center border-b px-5 py-20 sm:px-8 lg:border-b-0 lg:border-r lg:px-12 xl:px-16">
+              <p className="font-mono text-xs text-muted-foreground">For trips, homes, dinners, and everything between.</p>
+              <h1 className="mt-7 max-w-2xl text-[clamp(3.25rem,7vw,6.6rem)] font-medium leading-[0.9] tracking-[-0.075em]">
+                Shared expenses, without the payment chase.
+              </h1>
+              <p className="mt-8 max-w-lg text-base leading-7 text-muted-foreground sm:text-lg">
+                Jemaw keeps every expense, approval, and payment in one shared record—so your group always knows what happened and what comes next.
+              </p>
+              <div className="mt-9 flex flex-wrap items-center gap-4">
+                <Link href="/sign-up" className="inline-flex h-12 items-center gap-2 rounded-md bg-foreground px-5 text-sm font-semibold text-white hover:bg-[#30332e]">
+                  Start a group <ArrowRight className="size-4" />
+                </Link>
+                <span className="text-xs text-muted-foreground">Free to start · No card required</span>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Floating UI cards */}
-        {/* Bill card — bottom right */}
-        <div className="absolute bottom-16 right-16 hidden lg:block">
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/60 p-5 w-64">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Latest bill</span>
-              <span className="text-xs bg-amber-100 text-amber-700 font-medium px-2 py-0.5 rounded-full">Pending</span>
-            </div>
-            <p className="text-sm font-semibold text-slate-900 mb-1">Hotel in Lalibela</p>
-            <p className="text-2xl font-bold text-slate-900 mb-3">2,800</p>
-            <div className="flex items-center gap-1.5">
-              <div className="flex -space-x-1.5">
-                {["Y", "M", "A", "B"].map((l) => (
-                  <div key={l} className="w-6 h-6 rounded-full bg-indigo-500 border-2 border-white flex items-center justify-center">
-                    <span className="text-[9px] font-bold text-white">{l}</span>
+            <div className="flex items-center bg-white px-5 py-14 sm:px-8 lg:px-12 xl:px-16">
+              <div className="w-full border-y border-foreground">
+                <div className="flex items-start justify-between gap-5 border-b px-1 py-5">
+                  <div>
+                    <p className="text-xl font-semibold tracking-[-0.03em]">Lisbon weekend</p>
+                    <p className="mt-1 text-xs text-muted-foreground">4 people · EUR</p>
                   </div>
-                ))}
-              </div>
-              <span className="text-xs text-slate-400 ml-1">Split 4 ways</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Balance card — middle right */}
-        <div className="absolute top-1/2 -translate-y-1/2 right-24 hidden xl:block">
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/60 px-5 py-4">
-            <p className="text-xs font-medium text-slate-400 mb-1">Your balance</p>
-            <p className="text-xl font-bold text-emerald-600">+1,200</p>
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <p className="text-xs text-slate-400">owed to you</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Scroll hint */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-white/30">
-          <div className="w-px h-10 bg-white/20" />
-          <span className="text-[10px] uppercase tracking-widest">Scroll</span>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="bg-white py-28">
-        <div className="max-w-6xl mx-auto px-8">
-          <div className="max-w-sm mb-16">
-            <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Features</span>
-            <h2 className="text-4xl font-bold text-slate-900 mt-3 leading-tight">Everything your group needs</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {[
-              {
-                icon: Receipt,
-                title: "Track bills",
-                desc: "Add expenses with receipt photos. Every transaction is logged and visible to the whole group.",
-              },
-              {
-                icon: Users,
-                title: "Split fairly",
-                desc: "Equal splits calculated instantly. Every member sees their exact share before approving.",
-              },
-              {
-                icon: CheckCircle,
-                title: "Settle up",
-                desc: "Upload payment proof and get confirmed by the receiver. No disputes, full transparency.",
-              },
-            ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="flex flex-col">
-                <div className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center mb-6">
-                  <Icon className="w-5 h-5 text-indigo-600" />
+                  <div className="text-right">
+                    <p className="font-mono text-xl font-semibold text-[#237a4b]">+€38.20</p>
+                    <p className="mt-1 text-xs text-muted-foreground">owed to you</p>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">{title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Second photo section — full-bleed reversed */}
-      <section className="relative h-[520px] overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=1800&q=85"
-          alt="Friends on a trip"
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-        <div className="absolute inset-0 bg-slate-950/55" />
-        <div className="relative z-10 max-w-6xl mx-auto px-8 h-full flex items-center">
-          <div className="max-w-lg">
-            <span className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Built for real life</span>
-            <h2 className="text-4xl font-bold text-white mt-3 mb-5 leading-snug">
-              For trips, dinners,<br />housemates — any group.
-            </h2>
-            <p className="text-white/60 leading-relaxed mb-8 max-w-sm">
-              Whether it&apos;s a weekend getaway, a shared apartment, or a group lunch — Jemaw keeps everyone on the same page.
-            </p>
-            <Link
-              href="/sign-up"
-              className="inline-flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 px-6 py-3 rounded-xl font-semibold text-sm transition-colors shadow-lg"
-            >
-              Start a group <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="bg-slate-50 py-24">
-        <div className="max-w-6xl mx-auto px-8">
-          <div className="text-center mb-16">
-            <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">How it works</span>
-            <h2 className="text-4xl font-bold text-slate-900 mt-3">Up and running in minutes</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 relative">
-            <div className="hidden md:block absolute top-7 left-[calc(16.6%+1rem)] right-[calc(16.6%+1rem)] h-px border-t-2 border-dashed border-slate-200" />
-            {[
-              { n: "1", title: "Create a group", desc: "Invite your friends, housemates, or travel crew." },
-              { n: "2", title: "Add bills together", desc: "Anyone can add expenses. Members approve their share." },
-              { n: "3", title: "Settle up", desc: "Pay and upload proof. Done — no chasing, no confusion." },
-            ].map(({ n, title, desc }) => (
-              <div key={n} className="flex flex-col items-center text-center px-8 relative">
-                <div className="w-14 h-14 rounded-full bg-white border border-slate-200 flex items-center justify-center mb-5 z-10 shadow-sm">
-                  <span className="text-xl font-bold text-slate-300">{n}</span>
+                <div className="flex items-center justify-between gap-5 border-b px-1 py-4">
+                  <div className="flex -space-x-2">{people.map((person) => <Person key={person.name} person={person} />)}</div>
+                  <span className="font-mono text-[11px] text-muted-foreground">SAT 18:42</span>
                 </div>
-                <h3 className="text-base font-semibold text-slate-900 mb-2">{title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
+
+                <div className="border-b py-6">
+                  <div className="grid grid-cols-[32px_minmax(0,1fr)_auto] gap-3">
+                    <Person person={people[0]} />
+                    <div>
+                      <p className="text-sm"><strong className="font-semibold">Mina</strong> added <strong className="font-semibold">Dinner at Prado</strong></p>
+                      <p className="mt-1 text-xs text-muted-foreground">Mina paid · split equally between 4</p>
+                      <div className="mt-3 flex items-center gap-2 text-xs text-[#8a6411]"><span className="size-1.5 rounded-full bg-[#d99a18]" />Your approval is needed</div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono text-sm font-semibold">€124.80</p>
+                      <p className="mt-1 font-mono text-[11px] text-muted-foreground">you €31.20</p>
+                    </div>
+                  </div>
+                  <div className="ml-11 mt-4 flex gap-2">
+                    <span className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground px-3 text-xs font-semibold text-white"><Check className="size-3.5" />Approve</span>
+                    <span className="inline-flex h-8 items-center rounded-md border px-3 text-xs font-medium">Review split</span>
+                  </div>
+                </div>
+
+                <div className="border-b py-6">
+                  <div className="grid grid-cols-[32px_minmax(0,1fr)_auto] gap-3">
+                    <Person person={people[2]} />
+                    <div>
+                      <p className="text-sm"><strong className="font-semibold">Sofia</strong> added <strong className="font-semibold">Train to Sintra</strong></p>
+                      <p className="mt-1 text-xs text-muted-foreground">Sofia paid · approved by Leo</p>
+                      <div className="mt-3 flex items-center gap-2 text-xs text-[#237a4b]"><span className="size-1.5 rounded-full bg-[#237a4b]" />Included in balances</div>
+                    </div>
+                    <p className="font-mono text-sm font-semibold">€68.40</p>
+                  </div>
+                </div>
+
+                <div className="py-6">
+                  <div className="grid grid-cols-[32px_minmax(0,1fr)_auto] gap-3">
+                    <Person person={people[1]} />
+                    <div>
+                      <p className="text-sm"><strong className="font-semibold">Leo</strong> paid you</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Bank transfer · waiting for confirmation</p>
+                    </div>
+                    <p className="font-mono text-sm font-semibold text-[#237a4b]">€22.00</p>
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="bg-indigo-600 py-24">
-        <div className="max-w-6xl mx-auto px-8 text-center">
-          <h2 className="text-4xl font-bold text-white mb-3">Ready to start splitting?</h2>
-          <p className="text-indigo-200 mb-8 text-lg">Join groups already using Jemaw to stay fair.</p>
-          <Link
-            href="/sign-up"
-            className="inline-flex items-center gap-2 bg-white text-indigo-600 hover:bg-slate-50 px-8 py-3.5 rounded-xl font-semibold text-sm transition-colors shadow-lg"
-          >
-            Get started free
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-slate-900 py-10">
-        <div className="max-w-6xl mx-auto px-8 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-indigo-500 flex items-center justify-center">
-              <SplitSquareVertical className="w-3 h-3 text-white" />
             </div>
-            <span className="font-bold text-white text-sm">Jemaw</span>
-            <span className="text-slate-600 text-sm ml-3">© 2025</span>
           </div>
-          <div className="flex items-center gap-6">
-            <Link href="/sign-in" className="text-sm text-slate-400 hover:text-slate-300 transition-colors">Sign in</Link>
-            <Link href="/sign-up" className="text-sm text-slate-400 hover:text-slate-300 transition-colors">Sign up</Link>
+        </section>
+
+        <section className="border-b bg-white">
+          <div className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:px-12 xl:px-16">
+            <div className="max-w-2xl">
+              <p className="font-mono text-xs text-muted-foreground">ONE RECORD. DIFFERENT KINDS OF GROUP.</p>
+              <h2 className="mt-5 text-4xl font-medium leading-tight tracking-[-0.055em] sm:text-5xl">Money follows the plan. Jemaw keeps up.</h2>
+            </div>
+            <div className="mt-14 border-t border-foreground">
+              {situations.map((situation) => (
+                <article key={situation.index} className="grid gap-5 border-b py-8 md:grid-cols-[72px_0.8fr_1.2fr] md:items-start">
+                  <span className="font-mono text-xs text-muted-foreground">{situation.index}</span>
+                  <div>
+                    <h3 className="text-xl font-semibold tracking-[-0.025em]">{situation.title}</h3>
+                    <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{situation.body}</p>
+                  </div>
+                  <div className="border-l-2 border-[#f15b3a] pl-4 md:ml-auto md:w-full md:max-w-lg">
+                    <div className="flex items-center justify-between gap-4">
+                      <div><p className="text-sm font-semibold">{situation.group}</p><p className="mt-1 font-mono text-[10px] text-muted-foreground">{situation.currency}</p></div>
+                      <p className="font-mono text-sm font-semibold">{situation.amount}</p>
+                    </div>
+                    <p className="mt-4 text-xs text-muted-foreground">{situation.activity}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
+        </section>
+
+        <section className="border-b">
+          <div className="mx-auto grid max-w-[1320px] lg:grid-cols-[0.75fr_1.25fr]">
+            <div className="border-b px-5 py-16 sm:px-8 lg:border-b-0 lg:border-r lg:px-12 xl:px-16">
+              <p className="font-mono text-xs text-muted-foreground">THE TRUST PART</p>
+              <h2 className="mt-5 text-4xl font-medium tracking-[-0.05em]">The numbers should be easy to believe.</h2>
+            </div>
+            <div className="divide-y bg-white px-5 sm:px-8 lg:px-12 xl:px-16">
+              {[
+                [ReceiptText, "Every change has a history", "Expenses and payments stay visible to the group. Approved records cannot quietly change later."],
+                [Check, "Nothing counts before review", "Approvals make it clear who has seen a split and when it begins affecting balances."],
+                [LockKeyhole, "Payments come with evidence", "Record an outside payment, attach proof, and let the receiver confirm it before balances move."],
+              ].map(([Icon, title, body]) => {
+                const ItemIcon = Icon as typeof Check;
+                return (
+                  <div key={title as string} className="grid grid-cols-[32px_1fr] gap-4 py-8">
+                    <ItemIcon className="mt-0.5 size-5 text-[#f15b3a]" />
+                    <div><h3 className="text-base font-semibold">{title as string}</h3><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{body as string}</p></div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[#171916] text-white">
+          <div className="mx-auto flex max-w-[1320px] flex-col items-start justify-between gap-8 px-5 py-16 sm:px-8 md:flex-row md:items-end lg:px-12 xl:px-16">
+            <div><p className="font-mono text-xs text-white/50">YOUR NEXT SHARED TAB</p><h2 className="mt-4 max-w-2xl text-4xl font-medium tracking-[-0.055em] sm:text-5xl">Name the group. Add the people. Keep the record clear.</h2></div>
+            <Link href="/sign-up" className="inline-flex h-12 shrink-0 items-center gap-2 rounded-md bg-white px-5 text-sm font-semibold text-[#171916] hover:bg-[#e9eae5]">Create a group <ArrowRight className="size-4" /></Link>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t bg-[#171916] text-white/60">
+        <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-5 px-5 py-7 text-xs sm:px-8 lg:px-12 xl:px-16">
+          <Brand href="/" inverse />
+          <span>Shared expenses, kept clear.</span>
         </div>
       </footer>
     </div>
