@@ -1,21 +1,20 @@
 import { getPendingBillsForUser } from "@/actions/bills";
 import { getPendingSettlementsForUser } from "@/actions/settlements";
 import { PendingItems } from "./pending-items";
+import { getServerSession } from "@/lib/session";
+import { PageHeader } from "@/components/page-header";
 
 export default async function PendingPage() {
-  const [pendingBills, pendingSettlements] = await Promise.all([
+  const [session, pendingBills, pendingSettlements] = await Promise.all([
+    getServerSession(),
     getPendingBillsForUser(),
     getPendingSettlementsForUser(),
   ]);
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="mb-10">
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary">Your turn</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-[-0.045em] text-[#20231d] sm:text-4xl">Requests</h1>
-        <p className="mt-2 text-sm text-muted-foreground">A calm place to check expenses and confirm money you received.</p>
-      </div>
-      <PendingItems pendingBills={pendingBills} pendingSettlements={pendingSettlements} />
+      <PageHeader className="mb-9" title="Requests" description="Review an expense before it affects balances, or confirm a payment you received." />
+      <PendingItems pendingBills={pendingBills} pendingSettlements={pendingSettlements} currentUserId={session!.user.id} />
     </div>
   );
 }

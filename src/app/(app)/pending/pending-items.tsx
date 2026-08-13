@@ -2,31 +2,27 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Check, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 import { approveBill, rejectBill } from "@/actions/bills";
 import { approveSettlement, rejectSettlement } from "@/actions/settlements";
+import { MoneyAmount } from "@/components/money-amount";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { formatCurrency, cn } from "@/lib/utils";
-import { getCategoryMeta } from "@/lib/presentation";
-import { Check, X, Receipt, ArrowLeftRight, ArrowRight, LayoutList } from "lucide-react";
+import { initials } from "@/lib/presentation";
 
 type PendingBill = {
   id: string;
   description: string;
   amount: string;
   category: string;
+  receiptUrl: string | null;
   createdAt: Date;
   paidBy: { name: string };
   jemaw: { name: string; currency: string };
-  splits: { userId: string; user: { name: string } }[];
+  splits: { userId: string; amount: string; user: { name: string } }[];
 };
 
 type PendingSettlement = {
@@ -39,275 +35,90 @@ type PendingSettlement = {
   jemaw: { name: string; currency: string };
 };
 
-type Filter = "all" | "bills" | "settlements";
-
-export function PendingItems({
-  pendingBills,
-  pendingSettlements,
-}: {
-  pendingBills: PendingBill[];
-  pendingSettlements: PendingSettlement[];
-}) {
+export function PendingItems({ pendingBills, pendingSettlements, currentUserId }: { pendingBills: PendingBill[]; pendingSettlements: PendingSettlement[]; currentUserId: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [rejectTarget, setRejectTarget] = useState<{ id: string; type: "bill" | "settlement" } | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{ id: string; type: "bill" | "settlement"; label: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  const totalCount = pendingBills.length + pendingSettlements.length;
 
-  function handleBillAction(action: "approve" | "reject", billId: string) {
-    if (action === "reject") {
-      setRejectTarget({ id: billId, type: "bill" });
-      setRejectReason("");
-      return;
-    }
-    startTransition(async () => {
-      try {
-        const result = await approveBill({ billId });
-        toast.success(result.message);
-        router.refresh();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Action failed");
-      }
-    });
+  function approveExpense(billId: string) {
+    startTransition(async () => { try { const result = await approveBill({ billId }); toast.success(result.message); router.refresh(); } catch (error) { toast.error(error instanceof Error ? error.message : "Could not approve the expense"); } });
   }
 
-  function handleApproveSettlement(settlementId: string) {
-    startTransition(async () => {
-      try {
-        const result = await approveSettlement({ settlementId });
-        toast.success(result.message);
-        router.refresh();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Action failed");
-      }
-    });
+  function confirmPayment(settlementId: string) {
+    startTransition(async () => { try { const result = await approveSettlement({ settlementId }); toast.success(result.message); router.refresh(); } catch (error) { toast.error(error instanceof Error ? error.message : "Could not confirm the payment"); } });
   }
 
-  function handleConfirmReject() {
+  function confirmDispute() {
     if (!rejectTarget) return;
     if (rejectTarget.type === "settlement" && !rejectReason.trim()) return;
     startTransition(async () => {
       try {
-        if (rejectTarget.type === "bill") {
-          const result = await rejectBill({ billId: rejectTarget.id });
-          toast.success(result.message);
-        } else {
-          const result = await rejectSettlement({ settlementId: rejectTarget.id, reason: rejectReason.trim() });
-          toast.success(result.message);
-        }
+        const result = rejectTarget.type === "bill" ? await rejectBill({ billId: rejectTarget.id }) : await rejectSettlement({ settlementId: rejectTarget.id, reason: rejectReason.trim() });
+        toast.success(result.message);
         setRejectTarget(null);
         setRejectReason("");
         router.refresh();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Action failed");
-      }
+      } catch (error) { toast.error(error instanceof Error ? error.message : "Could not dispute this request"); }
     });
   }
 
-  const totalCount = pendingBills.length + pendingSettlements.length;
-  const showBills = filter === "all" || filter === "bills";
-  const showSettlements = filter === "all" || filter === "settlements";
-
-  const filters: { key: Filter; label: string; icon: React.ReactNode; count: number }[] = [
-    { key: "all", label: "All", icon: <LayoutList className="w-4 h-4" />, count: totalCount },
-    { key: "bills", label: "Bills", icon: <Receipt className="w-4 h-4" />, count: pendingBills.length },
-    { key: "settlements", label: "Settlements", icon: <ArrowLeftRight className="w-4 h-4" />, count: pendingSettlements.length },
-  ];
-
-  if (totalCount === 0) {
-    return (
-      <div className="border-y border-[#dcd5c8] py-20 text-center">
-        <span className="text-4xl">✨</span>
-        <p className="mt-4 text-lg font-extrabold text-[#20231d]">All caught up</p>
-        <p className="mt-1 text-sm text-muted-foreground">There is nothing waiting on you.</p>
-      </div>
-    );
-  }
+  if (totalCount === 0) return <div className="border-y py-14"><Check className="size-5 text-[#237a4b]" /><h2 className="mt-4 text-base font-semibold">Nothing needs review</h2><p className="mt-2 text-sm text-muted-foreground">New expenses and payments will appear here when they need you.</p></div>;
 
   return (
     <>
-      <div>
-        <div className="mb-9 flex items-center justify-between gap-4 border-b border-[#dcd5c8] pb-4">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#8d8f87]">Show me</p>
-          <div className="inline-flex rounded-full bg-[#e7e0d4] p-1">
-            {filters.map(({ key, label, icon, count }) => (
-              <button
-                key={key}
-                onClick={() => setFilter(key)}
-                className={cn(
-                  "flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-extrabold transition-colors",
-                  filter === key
-                    ? "bg-[#fffdf7] text-[#20231d] shadow-sm"
-                    : "text-[#74776f] hover:text-[#20231d]"
-                )}
-              >
-                <span className="flex items-center gap-1.5 [&_svg]:size-3.5">
-                  {icon}
-                  {label}
-                </span>
-                {count > 0 && (
-                  <span className="text-[9px] text-[#8c8e87] tabular-nums">
-                    {count}
-                  </span>
-                )}
-              </button>
+      <div className="mx-auto max-w-3xl">
+        {pendingBills.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between border-b border-foreground pb-3"><h2 className="text-sm font-semibold">Expenses</h2><span className="font-mono text-[10px] text-muted-foreground">{pendingBills.length}</span></div>
+            {pendingBills.map((bill) => {
+              const mySplit = bill.splits.find((split) => split.userId === currentUserId);
+              return (
+                <article key={bill.id} className="border-b py-6">
+                  <div className="grid grid-cols-[32px_minmax(0,1fr)_auto] gap-3 sm:gap-4">
+                    <Avatar className="size-8"><AvatarFallback className="bg-muted text-[9px] font-semibold">{initials(bill.paidBy.name)}</AvatarFallback></Avatar>
+                    <div className="min-w-0"><p className="text-sm"><span className="font-semibold">{bill.paidBy.name}</span> added <span className="font-semibold">{bill.description}</span></p><p className="mt-1 text-xs text-muted-foreground">{bill.jemaw.name} · split between {bill.splits.length}</p><p className="mt-3 text-xs">Your share <MoneyAmount amount={mySplit?.amount ?? 0} currency={bill.jemaw.currency} className="font-semibold" /></p>{bill.receiptUrl && <a href={bill.receiptUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium underline underline-offset-4"><ReceiptText className="size-3.5" />View receipt</a>}</div>
+                    <div className="text-right"><MoneyAmount amount={bill.amount} currency={bill.jemaw.currency} className="text-sm font-semibold" /><p className="mt-1 font-mono text-[9px] text-muted-foreground">{new Date(bill.createdAt).toLocaleDateString()}</p></div>
+                  </div>
+                  <div className="ml-11 mt-4 flex gap-2 sm:ml-12"><Button size="sm" onClick={() => approveExpense(bill.id)} disabled={isPending}><Check className="size-3.5" />Approve</Button><Button size="sm" variant="outline" onClick={() => setRejectTarget({ id: bill.id, type: "bill", label: bill.description })} disabled={isPending}>Dispute</Button></div>
+                </article>
+              );
+            })}
+          </section>
+        )}
+
+        {pendingSettlements.length > 0 && (
+          <section className={pendingBills.length > 0 ? "mt-12" : ""}>
+            <div className="flex items-center justify-between border-b border-foreground pb-3"><h2 className="text-sm font-semibold">Payments</h2><span className="font-mono text-[10px] text-muted-foreground">{pendingSettlements.length}</span></div>
+            {pendingSettlements.map((payment) => (
+              <article key={payment.id} className="border-b py-6">
+                <div className="grid grid-cols-[32px_minmax(0,1fr)_auto] gap-3 sm:gap-4">
+                  <Avatar className="size-8"><AvatarFallback className="bg-muted text-[9px] font-semibold">{initials(payment.payer.name)}</AvatarFallback></Avatar>
+                  <div className="min-w-0">
+                    <p className="text-sm"><span className="font-semibold">{payment.payer.name}</span> says they paid you</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{payment.jemaw.name}{payment.description ? ` · ${payment.description}` : ""}</p>
+                    {payment.paymentProofUrl && (
+                      <a href={payment.paymentProofUrl} target="_blank" rel="noreferrer" className="mt-3 block w-fit border bg-white p-1">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={payment.paymentProofUrl} alt="Payment proof" className="max-h-40 max-w-full object-contain" />
+                      </a>
+                    )}
+                  </div>
+                  <div className="text-right"><MoneyAmount amount={payment.amount} currency={payment.jemaw.currency} className="text-sm font-semibold text-[#237a4b]" /><p className="mt-1 font-mono text-[9px] text-muted-foreground">{new Date(payment.createdAt).toLocaleDateString()}</p></div>
+                </div>
+                <div className="ml-11 mt-4 flex gap-2 sm:ml-12"><Button size="sm" onClick={() => confirmPayment(payment.id)} disabled={isPending}><Check className="size-3.5" />Confirm received</Button><Button size="sm" variant="outline" onClick={() => { setRejectTarget({ id: payment.id, type: "settlement", label: `Payment from ${payment.payer.name}` }); setRejectReason(""); }} disabled={isPending}>Dispute</Button></div>
+              </article>
             ))}
-          </div>
-        </div>
-
-        <div className="mx-auto max-w-3xl space-y-12">
-          {/* Bills section */}
-          {showBills && pendingBills.length > 0 && (
-            <div>
-              <div className="mb-3 flex items-center gap-3">
-                <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#797c74]">Expenses to check</span>
-                <span className="text-[10px] font-semibold text-[#9a9b94]">{pendingBills.length}</span>
-                <div className="h-px flex-1 bg-[#dcd5c8]" />
-              </div>
-              <div>
-                {pendingBills.map((bill) => (
-                  <div key={bill.id} className="flex flex-col border-b border-[#ded8cb] last:border-0">
-                    <div className="flex items-center py-5">
-                      <div className={cn("mr-4 grid size-11 shrink-0 place-items-center rounded-[16px] text-xl", getCategoryMeta(bill.category).tint)}>{getCategoryMeta(bill.category).emoji}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate text-[15px] font-extrabold text-[#20231d]">{bill.description}</p>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          <span className="text-xs font-semibold text-[#777a72]">{bill.paidBy.name} paid</span>
-                          <span className="text-slate-200">·</span>
-                          <span className="text-xs text-[#8d8f87]">{bill.jemaw.name}</span>
-                          <span className="text-slate-200">·</span>
-                          <span className="text-xs text-[#8d8f87]">{new Date(bill.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <p className="mt-1 text-[10px] text-[#96978f]">
-                          Split between: {bill.splits.map((s) => s.user.name).join(", ")}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <p className="font-money text-xl font-semibold text-[#20231d]">{formatCurrency(bill.amount, bill.jemaw.currency)}</p>
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#9a731d]">Waiting</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 pb-5 pl-[60px]">
-                      <Button size="sm" disabled={isPending} onClick={() => handleBillAction("approve", bill.id)}>
-                        <Check className="w-3 h-3 mr-1" /> Approve
-                      </Button>
-                      <Button size="sm" variant="ghost" className="text-destructive" disabled={isPending} onClick={() => handleBillAction("reject", bill.id)}>
-                        <X className="w-3 h-3 mr-1" /> Reject
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Empty state for filtered view */}
-          {showBills && pendingBills.length === 0 && filter === "bills" && (
-            <div className="py-16 flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                <Receipt className="w-5 h-5 text-slate-400" />
-              </div>
-              <p className="text-sm text-slate-400">No bills pending your approval.</p>
-            </div>
-          )}
-
-          {/* Settlements section */}
-          {showSettlements && pendingSettlements.length > 0 && (
-            <div>
-              <div className="mb-3 flex items-center gap-3">
-                <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#797c74]">Payments to confirm</span>
-                <span className="text-[10px] font-semibold text-[#9a9b94]">{pendingSettlements.length}</span>
-                <div className="h-px flex-1 bg-[#dcd5c8]" />
-              </div>
-              <div>
-                {pendingSettlements.map((s) => (
-                  <div key={s.id} className="flex flex-col border-b border-[#ded8cb] last:border-0">
-                    <div className="flex items-center py-5">
-                      <div className="mr-4 grid size-11 shrink-0 place-items-center rounded-[16px] bg-[#dfeae5] text-xl">💸</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 text-sm">
-                          <span className="font-extrabold text-[#20231d]">{s.payer.name}</span>
-                          <ArrowRight className="w-3 h-3 text-slate-300 shrink-0" />
-                          <span className="font-extrabold text-[#20231d]">you</span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {s.description && <><span className="text-xs text-slate-400 truncate">{s.description}</span><span className="text-slate-200">·</span></>}
-                          <span className="text-xs text-slate-400">{s.jemaw.name}</span>
-                          <span className="text-slate-200">·</span>
-                          <span className="text-xs text-slate-400">{new Date(s.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <p className="font-money text-xl font-semibold text-[#19734f]">{formatCurrency(s.amount, s.jemaw.currency)}</p>
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#9a731d]">Waiting</span>
-                      </div>
-                    </div>
-                    <div className="space-y-3 pb-5 pl-[60px]">
-                      {s.paymentProofUrl && (
-                        <a href={s.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="inline-block">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={s.paymentProofUrl} alt="Payment proof" className="rounded-lg border border-slate-200 max-h-36 object-contain bg-slate-50 hover:opacity-90 transition-opacity cursor-zoom-in" />
-                        </a>
-                      )}
-                      <div className="flex gap-2">
-                        <Button size="sm" disabled={isPending} onClick={() => handleApproveSettlement(s.id)}>
-                          <Check className="w-3 h-3 mr-1" /> Confirm received
-                        </Button>
-                        <Button size="sm" variant="ghost" className="text-destructive" disabled={isPending} onClick={() => { setRejectTarget({ id: s.id, type: "settlement" }); setRejectReason(""); }}>
-                          <X className="w-3 h-3 mr-1" /> Reject
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Empty state for filtered view */}
-          {showSettlements && pendingSettlements.length === 0 && filter === "settlements" && (
-            <div className="py-16 flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                <ArrowLeftRight className="w-5 h-5 text-slate-400" />
-              </div>
-              <p className="text-sm text-slate-400">No settlements pending your approval.</p>
-            </div>
-          )}
-        </div>
+          </section>
+        )}
       </div>
 
-      {/* Reject dialog */}
-      <Dialog open={!!rejectTarget} onOpenChange={(open) => { if (!open) { setRejectTarget(null); setRejectReason(""); } }}>
+      <Dialog open={Boolean(rejectTarget)} onOpenChange={(open) => { if (!open) { setRejectTarget(null); setRejectReason(""); } }}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{rejectTarget?.type === "bill" ? "Reject bill" : "Reject settlement"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            {rejectTarget?.type === "settlement" && (
-              <>
-                <p className="text-sm text-slate-500">The payer will see your reason. Be specific so they know what to fix.</p>
-                <Textarea
-                  placeholder="e.g. Screenshot doesn't match amount, payment wasn't received..."
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  rows={4}
-                  autoFocus
-                />
-              </>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setRejectTarget(null); setRejectReason(""); }} disabled={isPending}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmReject}
-              disabled={isPending || (rejectTarget?.type === "settlement" && !rejectReason.trim())}
-            >
-              {isPending ? "Rejecting…" : "Confirm rejection"}
-            </Button>
-          </DialogFooter>
+          <DialogHeader><DialogTitle>Dispute this {rejectTarget?.type === "bill" ? "expense" : "payment"}</DialogTitle><p className="text-sm text-muted-foreground">{rejectTarget?.label}</p></DialogHeader>
+          {rejectTarget?.type === "settlement" ? <div className="space-y-2"><p className="text-sm leading-6 text-muted-foreground">Tell the payer what did not match so they can correct it.</p><Textarea placeholder="Payment not received, amount differs from proof…" value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} rows={4} autoFocus /></div> : <p className="text-sm leading-6 text-muted-foreground">This expense will be marked disputed and will not affect balances.</p>}
+          <DialogFooter><Button variant="outline" onClick={() => setRejectTarget(null)}>Cancel</Button><Button variant="destructive" onClick={confirmDispute} disabled={isPending || (rejectTarget?.type === "settlement" && !rejectReason.trim())}>{isPending ? "Disputing…" : "Dispute"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </>
