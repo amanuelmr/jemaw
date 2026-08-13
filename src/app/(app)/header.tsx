@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { SplitSquareVertical, Bell, Check, LogOut, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Bell, LogOut, UserRound } from "lucide-react";
 import { signOut } from "@/lib/auth-client";
 import { markAsRead, markAllAsRead } from "@/actions/notifications";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Brand } from "@/components/brand";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,17 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { initials } from "@/lib/presentation";
 import { useEffect, useRef, useState, useTransition } from "react";
-
-interface HeaderProps {
-  user: { name: string; email: string };
-}
-
-const navLinks = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/pending", label: "Pending" },
-  { href: "/profile", label: "Profile" },
-];
 
 type Notification = {
   id: string;
@@ -34,8 +26,7 @@ type Notification = {
   createdAt: Date;
 };
 
-export function Header({ user }: HeaderProps) {
-  const pathname = usePathname();
+export function Header({ user }: { user: { name: string; email: string } }) {
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isPending, startTransition] = useTransition();
@@ -44,191 +35,119 @@ export function Header({ user }: HeaderProps) {
 
   useEffect(() => {
     const source = new EventSource("/api/notifications/stream");
-
     source.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data as string) as {
           type: string;
           notifications: (Omit<Notification, "createdAt"> & { createdAt: string })[];
         };
-
-        // Normalise createdAt strings → Date objects
         const parse = (list: typeof data.notifications): Notification[] =>
-          list.map((n) => ({ ...n, createdAt: new Date(n.createdAt) }));
+          list.map((notification) => ({ ...notification, createdAt: new Date(notification.createdAt) }));
 
-        if (data.type === "init") {
-          setNotifications(parse(data.notifications));
-        } else if (data.type === "new") {
-          setNotifications((prev) => {
-            const existingIds = new Set(prev.map((n) => n.id));
-            const incoming = parse(data.notifications).filter((n) => !existingIds.has(n.id));
-            if (incoming.length === 0) return prev;
+        if (data.type === "init") setNotifications(parse(data.notifications));
+        if (data.type === "new") {
+          setNotifications((current) => {
+            const ids = new Set(current.map((item) => item.id));
+            const incoming = parse(data.notifications).filter((item) => !ids.has(item.id));
+            if (incoming.length === 0) return current;
             if (bellFlashTimer.current) clearTimeout(bellFlashTimer.current);
             setBellFlash(true);
             bellFlashTimer.current = setTimeout(() => setBellFlash(false), 1000);
-            return [...incoming, ...prev].slice(0, 20);
+            return [...incoming, ...current].slice(0, 20);
           });
         }
-      } catch { /* ignore malformed events */ }
+      } catch {}
     };
-
     return () => {
       source.close();
       if (bellFlashTimer.current) clearTimeout(bellFlashTimer.current);
     };
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
+
+  function openNotification(notification: Notification) {
+    if (!notification.read) {
+      markAsRead({ notificationId: notification.id })
+        .then(() =>
+          setNotifications((current) =>
+            current.map((item) => (item.id === notification.id ? { ...item, read: true } : item))
+          )
+        )
+        .catch(() => {});
+    }
+    router.push(notification.link);
+  }
+
+  function markEverythingRead() {
+    startTransition(async () => {
+      await markAllAsRead().catch(() => {});
+      setNotifications((current) => current.map((item) => ({ ...item, read: true })));
+    });
+  }
 
   async function handleSignOut() {
     await signOut();
     router.push("/sign-in");
   }
 
-  function handleNotificationClick(n: Notification) {
-    if (!n.read) {
-      markAsRead({ notificationId: n.id })
-        .then(() => setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, read: true } : x)))
-        .catch(() => {});
-    }
-    router.push(n.link);
-  }
-
-  function handleMarkAllRead() {
-    startTransition(async () => {
-      await markAllAsRead().catch(() => {});
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    });
-  }
-
-  const initials = user.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
   return (
-    <header className="sticky top-0 z-50 h-14 bg-white/95 backdrop-blur-sm border-b border-slate-200">
-      <div className="max-w-6xl mx-auto h-full px-4 sm:px-6 flex items-center gap-3 md:gap-6">
-        {/* Logo */}
-        <Link href="/dashboard" className="flex items-center gap-2 shrink-0 mr-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center">
-            <SplitSquareVertical className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span className="font-bold text-slate-900 text-base">Jemaw</span>
-        </Link>
+    <header className="sticky top-0 z-40 flex h-16 items-center border-b border-[#ded8cb] bg-[#f5f1e8]/92 px-4 backdrop-blur-md md:hidden">
+      <Brand />
+      <div className="ml-auto flex items-center gap-1">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn("relative grid size-10 place-items-center rounded-full text-[#62665e] hover:bg-black/[0.05]", bellFlash && "text-primary")}
+              aria-label={`Updates${unreadCount ? `, ${unreadCount} unread` : ""}`}
+            >
+              <Bell className={cn("size-[18px]", bellFlash && "animate-bounce")} />
+              {unreadCount > 0 && <span className="absolute right-2 top-2 size-2 rounded-full border-2 border-[#f5f1e8] bg-[#e66f55]" />}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[min(22rem,calc(100vw-2rem))] rounded-2xl bg-card p-1.5 shadow-xl">
+            <div className="flex items-center justify-between px-3 py-2">
+              <p className="text-sm font-extrabold">Updates</p>
+              {unreadCount > 0 && <button onClick={markEverythingRead} disabled={isPending} className="text-[11px] font-bold text-primary">Mark all read</button>}
+            </div>
+            <DropdownMenuSeparator />
+            {notifications.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">Nothing new yet.</p>
+            ) : (
+              notifications.slice(0, 8).map((notification) => (
+                <DropdownMenuItem key={notification.id} onClick={() => openNotification(notification)} className={cn("cursor-pointer rounded-xl px-3 py-3", !notification.read && "bg-[#edf3ef]") }>
+                  <div>
+                    <p className="text-xs leading-relaxed">{notification.message}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">{new Date(notification.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </DropdownMenuItem>
+              ))
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        {/* Nav */}
-        <nav aria-label="Primary navigation" className="hidden md:flex items-center gap-1">
-          {navLinks.map(({ href, label }) => {
-            const active =
-              pathname.startsWith(href) ||
-              (href === "/dashboard" && pathname.startsWith("/jemaws"));
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "relative px-3 py-1.5 text-sm rounded-md transition-colors",
-                  active
-                    ? "text-slate-900 font-medium"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50 font-normal"
-                )}
-              >
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Right side */}
-        <div className="ml-auto flex items-center gap-1">
-          {/* Notifications */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className={cn(
-                "relative w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors",
-                bellFlash && "text-indigo-500"
-              )}>
-                <Bell className={cn("w-4 h-4 transition-transform", bellFlash && "animate-bounce")} />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full" />
-                )}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <div className="flex items-center justify-between px-3 py-2">
-                <p className="text-sm font-semibold">Notifications</p>
-                {unreadCount > 0 && (
-                  <button
-                    onClick={handleMarkAllRead}
-                    disabled={isPending}
-                    className="text-xs text-indigo-600 hover:underline flex items-center gap-1"
-                  >
-                    <Check className="w-3 h-3" />
-                    Mark all read
-                  </button>
-                )}
-              </div>
-              <DropdownMenuSeparator />
-              {notifications.length === 0 ? (
-                <div className="px-3 py-6 text-center text-sm text-slate-400">No notifications yet</div>
-              ) : (
-                notifications.slice(0, 10).map((n) => (
-                  <DropdownMenuItem
-                    key={n.id}
-                    onClick={() => handleNotificationClick(n)}
-                    className={cn("cursor-pointer px-3 py-2.5 flex items-start gap-2.5", !n.read && "bg-indigo-50/40")}
-                  >
-                    {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />}
-                    <div className={cn("flex-1 min-w-0", n.read && "ml-4")}>
-                      <p className="text-xs leading-snug text-slate-700">{n.message}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {new Date(n.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </DropdownMenuItem>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* User menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-md hover:bg-slate-100 transition-colors ml-1">
-                <Avatar className="w-7 h-7">
-                  <AvatarFallback className="text-[10px] bg-indigo-100 text-indigo-700 font-semibold">{initials}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium text-slate-700 max-w-[100px] truncate hidden sm:block">
-                  {user.name.split(" ")[0]}
-                </span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <div className="px-3 py-2">
-                <p className="text-sm font-medium text-slate-900 truncate">{user.name}</p>
-                <p className="text-xs text-slate-400 truncate">{user.email}</p>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
-                  <User className="w-3.5 h-3.5" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={handleSignOut}
-                className="text-rose-600 focus:text-rose-600 flex items-center gap-2 cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="rounded-full p-1" aria-label="Open account menu">
+              <Avatar className="size-8">
+                <AvatarFallback className="bg-[#f3c767] text-[10px] font-extrabold text-[#20231d]">{initials(user.name)}</AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 rounded-2xl bg-card p-1.5">
+            <div className="px-3 py-2">
+              <p className="truncate text-sm font-extrabold">{user.name}</p>
+              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild className="rounded-xl">
+              <Link href="/profile" className="cursor-pointer gap-2"><UserRound className="size-4" />Your profile</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer gap-2 rounded-xl text-destructive focus:text-destructive">
+              <LogOut className="size-4" />Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
