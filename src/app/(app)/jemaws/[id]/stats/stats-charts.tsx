@@ -15,9 +15,9 @@ import {
 import { formatCurrency } from "@/lib/utils";
 
 const COLORS = [
-  "#6366f1", "#f59e0b", "#10b981", "#ef4444", "#3b82f6",
-  "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#84cc16",
-  "#06b6d4", "#e11d48",
+  "#185c48", "#e2a84a", "#c96951", "#4a82a8", "#7d6a9d",
+  "#5f8d72", "#d48691", "#8a7657", "#43909a", "#b58e4e",
+  "#547b91", "#a7554a",
 ];
 
 type CategoryData = { category: string; total: number };
@@ -34,7 +34,7 @@ function CustomTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-background border rounded-md px-3 py-2 text-sm shadow-md">
+    <div className="rounded-xl border border-[#ded8cb] bg-[#fffdf7] px-3 py-2 text-sm shadow-lg">
       <p className="font-medium">{payload[0].name}</p>
       <p className="text-muted-foreground">{formatCurrency(payload[0].value, currency)}</p>
     </div>
@@ -51,10 +51,11 @@ export function StatsCharts({
   currency: string;
 }) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-14">
       {byCategory.length > 0 && (
         <div>
-          <h2 className="text-base font-semibold mb-4">Spending by category</h2>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#85877f]">Where the money went</p>
+          <h2 className="mb-5 mt-1 text-xl font-extrabold">Spending by category</h2>
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="w-full sm:w-64 h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -65,7 +66,8 @@ export function StatsCharts({
                     nameKey="category"
                     cx="50%"
                     cy="50%"
-                    outerRadius={90}
+                    innerRadius={54}
+                    outerRadius={92}
                     labelLine={false}
                   >
                     {byCategory.map((_, index) => (
@@ -86,7 +88,7 @@ export function StatsCharts({
                 <div key={cat.category} className="flex justify-between items-center text-sm">
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-3 h-3 rounded-sm shrink-0"
+                      className="size-2.5 shrink-0 rounded-full"
                       style={{ background: COLORS[i % COLORS.length] }}
                     />
                     <span className="capitalize">{cat.category}</span>
@@ -103,7 +105,8 @@ export function StatsCharts({
 
       {memberBalances.length > 0 && (
         <div>
-          <h2 className="text-base font-semibold mb-4">Member balances</h2>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#85877f]">How the group stands</p>
+          <h2 className="mb-5 mt-1 text-xl font-extrabold">Member balances</h2>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -131,15 +134,15 @@ export function StatsCharts({
                   {memberBalances.map((entry, index) => (
                     <Cell
                       key={index}
-                      fill={entry.balance > 0 ? "#16a34a" : entry.balance < 0 ? "#dc2626" : "#94a3b8"}
+                      fill={entry.balance > 0 ? "#19734f" : entry.balance < 0 ? "#b84837" : "#9b9c94"}
                     />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            Green = owed money · Red = owes money · Gray = settled
+          <p className="mt-3 text-center text-[10px] font-semibold text-muted-foreground">
+            Green is money coming back · Red is money to pay · Gray is even
           </p>
         </div>
       )}
