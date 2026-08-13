@@ -17,7 +17,7 @@ export function MobileNav() {
   return (
     <nav
       aria-label="Primary navigation"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-[#d9d2c4] bg-[#fffdf7]/95 px-4 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+      className="fixed inset-x-0 bottom-0 z-50 border-t bg-white/95 px-4 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
     >
       <div className="mx-auto grid h-16 max-w-md grid-cols-3">
         {links.map(({ href, label, icon: Icon }) => {
@@ -30,8 +30,8 @@ export function MobileNav() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-h-11 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
-                active ? "text-primary" : "text-[#8a8b83]"
+                "relative flex min-h-11 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
+                active ? "text-foreground before:absolute before:top-0 before:h-0.5 before:w-7 before:bg-[#f15b3a]" : "text-muted-foreground"
               )}
             >
               <Icon className="h-5 w-5" />

@@ -39,8 +39,8 @@ export default async function AppLayout({
         }))}
       />
       <Header user={user} />
-      <div className="md:pl-[276px]">
-        <main className="page-enter mx-auto max-w-[1240px] px-4 py-6 pb-28 sm:px-7 sm:py-9 md:px-10 md:pb-12 lg:px-12">
+      <div className="md:pl-[232px]">
+        <main className="page-enter mx-auto max-w-[1280px] px-4 py-6 pb-28 sm:px-7 sm:py-8 md:px-9 md:pb-12 lg:px-12">
           {children}
         </main>
       </div>

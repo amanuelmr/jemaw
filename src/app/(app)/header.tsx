@@ -92,30 +92,30 @@ export function Header({ user }: { user: { name: string; email: string } }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center border-b border-[#ded8cb] bg-[#f5f1e8]/92 px-4 backdrop-blur-md md:hidden">
+    <header className="sticky top-0 z-40 flex h-14 items-center border-b bg-white/95 px-4 backdrop-blur-md md:hidden">
       <Brand />
       <div className="ml-auto flex items-center gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className={cn("relative grid size-10 place-items-center rounded-full text-[#62665e] hover:bg-black/[0.05]", bellFlash && "text-primary")}
+              className={cn("relative grid size-9 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground", bellFlash && "text-[#f15b3a]")}
               aria-label={`Updates${unreadCount ? `, ${unreadCount} unread` : ""}`}
             >
               <Bell className={cn("size-[18px]", bellFlash && "animate-bounce")} />
-              {unreadCount > 0 && <span className="absolute right-2 top-2 size-2 rounded-full border-2 border-[#f5f1e8] bg-[#e66f55]" />}
+              {unreadCount > 0 && <span className="absolute right-1.5 top-1.5 size-2 rounded-full border-2 border-white bg-[#f15b3a]" />}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[min(22rem,calc(100vw-2rem))] rounded-2xl bg-card p-1.5 shadow-xl">
+          <DropdownMenuContent align="end" className="w-[min(22rem,calc(100vw-2rem))] rounded-lg bg-white p-1.5">
             <div className="flex items-center justify-between px-3 py-2">
-              <p className="text-sm font-extrabold">Updates</p>
-              {unreadCount > 0 && <button onClick={markEverythingRead} disabled={isPending} className="text-[11px] font-bold text-primary">Mark all read</button>}
+              <p className="text-sm font-semibold">Updates</p>
+              {unreadCount > 0 && <button onClick={markEverythingRead} disabled={isPending} className="text-xs underline">Mark all read</button>}
             </div>
             <DropdownMenuSeparator />
             {notifications.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">Nothing new yet.</p>
             ) : (
               notifications.slice(0, 8).map((notification) => (
-                <DropdownMenuItem key={notification.id} onClick={() => openNotification(notification)} className={cn("cursor-pointer rounded-xl px-3 py-3", !notification.read && "bg-[#edf3ef]") }>
+                <DropdownMenuItem key={notification.id} onClick={() => openNotification(notification)} className={cn("cursor-pointer rounded-md px-3 py-3", !notification.read && "border-l-2 border-[#f15b3a] bg-[#fff7f4]") }>
                   <div>
                     <p className="text-xs leading-relaxed">{notification.message}</p>
                     <p className="mt-1 text-[10px] text-muted-foreground">{new Date(notification.createdAt).toLocaleDateString()}</p>
@@ -128,22 +128,22 @@ export function Header({ user }: { user: { name: string; email: string } }) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="rounded-full p-1" aria-label="Open account menu">
+            <button className="rounded-md p-0.5" aria-label="Open account menu">
               <Avatar className="size-8">
-                <AvatarFallback className="bg-[#f3c767] text-[10px] font-extrabold text-[#20231d]">{initials(user.name)}</AvatarFallback>
+                <AvatarFallback className="bg-[#e9eae5] text-[10px] font-semibold text-foreground">{initials(user.name)}</AvatarFallback>
               </Avatar>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 rounded-2xl bg-card p-1.5">
+          <DropdownMenuContent align="end" className="w-56 rounded-lg bg-white p-1.5">
             <div className="px-3 py-2">
-              <p className="truncate text-sm font-extrabold">{user.name}</p>
+              <p className="truncate text-sm font-semibold">{user.name}</p>
               <p className="truncate text-xs text-muted-foreground">{user.email}</p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="rounded-xl">
+            <DropdownMenuItem asChild className="rounded-md">
               <Link href="/profile" className="cursor-pointer gap-2"><UserRound className="size-4" />Your profile</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer gap-2 rounded-xl text-destructive focus:text-destructive">
+            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer gap-2 rounded-md text-destructive focus:text-destructive">
               <LogOut className="size-4" />Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
