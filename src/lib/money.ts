@@ -1,9 +1,12 @@
-const CURRENCY_DECIMAL_PLACES: Record<string, number> = {
-  JPY: 0,
-};
-
 export function getCurrencyDecimalPlaces(currency: string): number {
-  return CURRENCY_DECIMAL_PLACES[currency.toUpperCase()] ?? 2;
+  try {
+    return new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).resolvedOptions().maximumFractionDigits ?? 2;
+  } catch {
+    return 2;
+  }
 }
 
 export function parseMinorUnits(amount: string, currency: string): bigint {

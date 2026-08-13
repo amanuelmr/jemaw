@@ -4,20 +4,13 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { updateJemaw, archiveJemaw } from "@/actions/jemaws";
-import { SUPPORTED_CURRENCIES, CURRENCY_LABELS } from "@/lib/constants";
 import type { SupportedCurrency } from "@/lib/constants";
+import { CurrencyPicker } from "@/components/currency-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -115,18 +108,7 @@ export function EditJemawDialog({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="edit-currency">Currency</Label>
-            <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger id="edit-currency">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SUPPORTED_CURRENCIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {CURRENCY_LABELS[c] ?? c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CurrencyPicker id="edit-currency" value={currency} onValueChange={setCurrency} />
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>

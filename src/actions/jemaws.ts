@@ -79,7 +79,7 @@ async function assertMemberCanExit(jemawId: string, targetUserId: string) {
 const createJemawSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
-  currency: z.enum(SUPPORTED_CURRENCIES).default("USD"),
+  currency: z.enum(SUPPORTED_CURRENCIES),
 });
 
 const updateJemawSchema = z.object({

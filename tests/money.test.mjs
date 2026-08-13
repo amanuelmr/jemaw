@@ -36,6 +36,12 @@ test("respects zero-decimal currencies", () => {
   ]);
 });
 
+test("supports three and four decimal currencies", () => {
+  assert.equal(normalizeMoney("1.2", "KWD"), "1.200");
+  assert.equal(normalizeMoney("1.2345", "CLF"), "1.2345");
+  assert.throws(() => parseMinorUnits("1.2345", "KWD"));
+});
+
 test("normalizes and subtracts money without floating point", () => {
   assert.equal(normalizeMoney("001.2", "USD"), "1.20");
   assert.equal(subtractMoney("10.00", "3.34", "USD"), "6.66");

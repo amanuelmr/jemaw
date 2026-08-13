@@ -126,7 +126,7 @@ export const jemawMembers = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    balance: numeric("balance", { precision: 12, scale: 2 })
+    balance: numeric("balance", { precision: 16, scale: 4 })
       .notNull()
       .default("0.00"),
     isAdmin: boolean("is_admin").notNull().default(false),
@@ -174,7 +174,7 @@ export const bills = pgTable(
       .notNull()
       .references(() => jemaws.id, { onDelete: "cascade" }),
     description: text("description").notNull(),
-    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    amount: numeric("amount", { precision: 16, scale: 4 }).notNull(),
     category: billCategoryEnum("category").notNull().default("other"),
     paidById: text("paid_by_id")
       .notNull()
@@ -210,7 +210,7 @@ export const billSplits = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    amount: numeric("amount", { precision: 16, scale: 4 }).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
@@ -238,7 +238,7 @@ export const settlements = pgTable(
     receiverId: text("receiver_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    amount: numeric("amount", { precision: 16, scale: 4 }).notNull(),
     description: text("description"),
     paymentProofUrl: text("payment_proof_url"),
     rejectionReason: text("rejection_reason"),
@@ -323,7 +323,7 @@ export const ledgerEntries = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     currency: text("currency").notNull(),
-    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    amount: numeric("amount", { precision: 16, scale: 4 }).notNull(),
     sourceType: ledgerSourceTypeEnum("source_type").notNull(),
     sourceId: uuid("source_id").notNull(),
     description: text("description"),
