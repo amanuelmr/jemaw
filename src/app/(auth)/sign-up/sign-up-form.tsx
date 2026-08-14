@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Mail } from "lucide-react";
 import { GoogleIcon } from "@/components/google-icon";
 
-export function SignUpForm() {
+export function SignUpForm({ redirectTo }: { redirectTo: string }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,11 +19,12 @@ export function SignUpForm() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const signInHref = redirectTo === "/dashboard" ? "/sign-in" : `/sign-in?redirect=${encodeURIComponent(redirectTo)}`;
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
     try {
-      await signIn.social({ provider: "google", callbackURL: "/dashboard" });
+      await signIn.social({ provider: "google", callbackURL: redirectTo });
     } catch {
       setError("Failed to sign in with Google. Please try again.");
       setGoogleLoading(false);
@@ -51,7 +52,7 @@ export function SignUpForm() {
         name,
         email,
         password,
-        callbackURL: "/dashboard",
+        callbackURL: redirectTo,
       });
 
       if (result.error) {
@@ -82,7 +83,7 @@ export function SignUpForm() {
         </div>
         <p className="mt-8 text-sm text-muted-foreground">
           Already verified?{" "}
-          <Link href="/sign-in" className="font-semibold text-foreground underline underline-offset-4">
+          <Link href={signInHref} className="font-semibold text-foreground underline underline-offset-4">
             Sign in
           </Link>
         </p>
@@ -133,7 +134,7 @@ export function SignUpForm() {
 
       <p className="mt-7 text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/sign-in" className="font-semibold text-foreground underline underline-offset-4">
+        <Link href={signInHref} className="font-semibold text-foreground underline underline-offset-4">
           Sign in
         </Link>
       </p>

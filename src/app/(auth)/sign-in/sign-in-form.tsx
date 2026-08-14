@@ -10,7 +10,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { GoogleIcon } from "@/components/google-icon";
 
-export function SignInForm() {
+export function SignInForm({ redirectTo }: { redirectTo: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,11 +19,12 @@ export function SignInForm() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSent, setResendSent] = useState(false);
   const isUnverifiedError = error.toLowerCase().includes("verif");
+  const signUpHref = redirectTo === "/dashboard" ? "/sign-up" : `/sign-up?redirect=${encodeURIComponent(redirectTo)}`;
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
     try {
-      await signIn.social({ provider: "google", callbackURL: "/dashboard" });
+      await signIn.social({ provider: "google", callbackURL: redirectTo });
     } catch {
       setError("Failed to sign in with Google. Please try again.");
       setGoogleLoading(false);
@@ -34,7 +35,7 @@ export function SignInForm() {
     if (!email) return;
     setResendLoading(true);
     try {
-      await authClient.sendVerificationEmail({ email, callbackURL: "/dashboard" });
+      await authClient.sendVerificationEmail({ email, callbackURL: redirectTo });
       setResendSent(true);
     } catch {
       setError("Failed to resend verification email.");
@@ -52,7 +53,7 @@ export function SignInForm() {
       const result = await signIn.email({
         email,
         password,
-        callbackURL: "/dashboard",
+        callbackURL: redirectTo,
       });
 
       if (result.error) {
@@ -128,7 +129,7 @@ export function SignInForm() {
 
       <p className="mt-7 text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
-        <Link href="/sign-up" className="font-semibold text-foreground underline underline-offset-4">
+        <Link href={signUpHref} className="font-semibold text-foreground underline underline-offset-4">
           Create an account
         </Link>
       </p>

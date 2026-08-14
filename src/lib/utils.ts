@@ -17,6 +17,13 @@ export function formatCurrency(amount: number | string, currency: string = "USD"
   }
 }
 
+export function getSafeRedirect(path: string | undefined, fallback = "/dashboard"): string {
+  if (!path || !path.startsWith("/") || path.startsWith("//") || path.includes("://")) {
+    return fallback;
+  }
+  return path;
+}
+
 export function formatDate(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("en-US", {
