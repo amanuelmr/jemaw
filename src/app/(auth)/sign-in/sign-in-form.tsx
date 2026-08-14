@@ -6,6 +6,7 @@ import { signIn } from "@/lib/auth-client";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { GoogleIcon } from "@/components/google-icon";
 
@@ -69,15 +70,10 @@ export function SignInForm() {
       <h1 className="text-3xl font-semibold tracking-[-0.045em]">Sign in to Jemaw</h1>
       <p className="mb-8 mt-2 text-sm leading-6 text-muted-foreground">Open your groups and see what needs your attention.</p>
 
-      <button
-        type="button"
-        onClick={handleGoogleSignIn}
-        disabled={googleLoading}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-md border border-input bg-white text-sm font-semibold transition-colors hover:border-foreground disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <Button type="button" variant="outline" onClick={handleGoogleSignIn} disabled={googleLoading} className="h-11 w-full">
         <GoogleIcon />
         {googleLoading ? "Connecting…" : "Continue with Google"}
-      </button>
+      </Button>
 
       <div className="my-6 flex items-center gap-3">
         <div className="h-px flex-1 bg-border" /><span className="text-xs text-muted-foreground">or</span><div className="h-px flex-1 bg-border" />
@@ -117,10 +113,8 @@ export function SignInForm() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="password">Password</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
-            placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required

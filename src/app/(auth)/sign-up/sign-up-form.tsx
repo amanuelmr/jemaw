@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signUp, signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Mail } from "lucide-react";
 import { GoogleIcon } from "@/components/google-icon";
@@ -94,15 +95,10 @@ export function SignUpForm() {
       <h1 className="text-3xl font-semibold tracking-[-0.045em]">Create your account</h1>
       <p className="mb-8 mt-2 text-sm leading-6 text-muted-foreground">Start a group, invite the people involved, and keep the shared record in one place.</p>
 
-      <button
-        type="button"
-        onClick={handleGoogleSignIn}
-        disabled={googleLoading}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-md border border-input bg-white text-sm font-semibold transition-colors hover:border-foreground disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <Button type="button" variant="outline" onClick={handleGoogleSignIn} disabled={googleLoading} className="h-11 w-full">
         <GoogleIcon />
         {googleLoading ? "Connecting…" : "Continue with Google"}
-      </button>
+      </Button>
 
       <div className="my-6 flex items-center gap-3">
         <div className="h-px flex-1 bg-border" /><span className="text-xs text-muted-foreground">or</span><div className="h-px flex-1 bg-border" />
@@ -124,11 +120,11 @@ export function SignUpForm() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" placeholder="Min. 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
+          <PasswordInput id="password" placeholder="Min. 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="confirm-password">Confirm password</Label>
-          <Input id="confirm-password" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required autoComplete="new-password" />
+          <PasswordInput id="confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required autoComplete="new-password" />
         </div>
         <Button type="submit" className="mt-1 w-full" disabled={loading}>
           {loading ? "Creating account…" : "Create account"}

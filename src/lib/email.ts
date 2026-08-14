@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { PendingApprovalEmail } from "@/emails/pending-approval";
 import { JemawInvitationEmail } from "@/emails/jemaw-invitation";
@@ -7,15 +7,7 @@ import { VerificationEmail } from "@/emails/verification-email";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const EMAIL_FROM = process.env.EMAIL_FROM || "Jemaw <noreply@jemaw.app>";
 
-function createTransport() {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
-}
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export interface SendPendingApprovalEmailParams {
   to: string;
@@ -58,8 +50,7 @@ export async function sendPendingApprovalEmail({
       })
     );
 
-    const transporter = createTransport();
-    await transporter.sendMail({
+    const { error: sendError } = await resend.emails.send({
       from: EMAIL_FROM,
       to,
       subject:
@@ -68,6 +59,7 @@ export async function sendPendingApprovalEmail({
           : `Settlement request in ${jemawName}`,
       html,
     });
+    if (sendError) throw sendError;
 
     return { success: true };
   } catch (error) {
@@ -101,13 +93,13 @@ export async function sendJemawInvitationEmail({
       })
     );
 
-    const transporter = createTransport();
-    await transporter.sendMail({
+    const { error: sendError } = await resend.emails.send({
       from: EMAIL_FROM,
       to,
       subject: `${inviterName} invited you to join ${jemawName} on Jemaw`,
       html,
     });
+    if (sendError) throw sendError;
 
     return { success: true };
   } catch (error) {
@@ -168,13 +160,13 @@ export async function sendVerificationEmail({
 }) {
   try {
     const html = await render(VerificationEmail({ name, url }));
-    const transporter = createTransport();
-    await transporter.sendMail({
+    const { error: sendError } = await resend.emails.send({
       from: EMAIL_FROM,
       to: email,
       subject: "Verify your Jemaw account",
       html,
     });
+    if (sendError) throw sendError;
     return { success: true };
   } catch (error) {
     console.error("Failed to send verification email:", error);

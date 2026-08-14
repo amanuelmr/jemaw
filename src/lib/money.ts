@@ -19,13 +19,17 @@ export function parseMinorUnits(amount: string, currency: string): bigint {
   }
 
   const [, sign, whole, fraction = ""] = match;
-  if (fraction.length > decimalPlaces) {
+  if (fraction.length > decimalPlaces && /[1-9]/.test(fraction.slice(decimalPlaces))) {
     throw new Error(
       `${currency.toUpperCase()} supports at most ${decimalPlaces} decimal ${decimalPlaces === 1 ? "place" : "places"}`
     );
   }
 
-  const paddedFraction = fraction.padEnd(decimalPlaces, "0");
+  // Wider numeric DB columns (e.g. numeric(16,4)) return trailing zero padding
+  // beyond the currency's own precision — trim that padding rather than the
+  // significant digits before applying the currency's decimal places.
+  const significantFraction = fraction.slice(0, decimalPlaces);
+  const paddedFraction = significantFraction.padEnd(decimalPlaces, "0");
   const scale = 10n ** BigInt(decimalPlaces);
   const units = BigInt(whole) * scale + BigInt(paddedFraction || "0");
 
